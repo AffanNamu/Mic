@@ -1,0 +1,24 @@
+{
+  "name": "deenvoice-backend",
+  "private": true,
+  "version": "0.1.0",
+  "description": "DeenVoice backend: auth, voice consent, credits ledger, generation jobs, private audio storage",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/main.ts",
+    "migrate": "node --disable-warning=ExperimentalWarning src/migrate.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --disable-warning=ExperimentalWarning --test --test-concurrency=1 'test/**/*.test.ts'"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.3.1",
+    "fastify": "^5.12.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "typescript": "^7.0.2"
+  }
+}

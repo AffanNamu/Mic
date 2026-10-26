@@ -1,0 +1,2 @@
+song_id,rater_id,lyrics_language,rater_native_speaker,heard_reference_first,similarity,pronunciation,naturalness,arrangement,intelligibility,overall,would_share,notes
+EXAMPLE-en-1,r1,english,y,y,,,,,,,,delete this example row before use

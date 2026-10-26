@@ -46,3 +46,10 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Backend (Phase 2)
+backend/node_modules/
+backend/data/
+backend/.env
+backend/.env.*
+!backend/.env.example
