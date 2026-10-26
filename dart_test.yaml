@@ -1,0 +1,3 @@
+tags:
+  render:
+    description: "Writes screenshots to build/renders for visual comparison with the design reference."
