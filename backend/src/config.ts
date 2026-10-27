@@ -81,7 +81,8 @@ export function loadConfig(env: Env = process.env): Config {
     maxLyricsChars: num('MAX_LYRICS_CHARS', 3000),
     sessionDays: num('SESSION_TTL_DAYS', 30),
     jobDeadlineMinutes: num('JOB_DEADLINE_MINUTES', 20),
-    leaseSeconds: num('JOB_LEASE_SECONDS', 60),
+    // Longer than the slowest single step (a 60 s download) so a live worker never loses its own lease.
+    leaseSeconds: num('JOB_LEASE_SECONDS', 120),
     creditsPerSong: num('CREDITS_PER_SONG', 1),
   };
 

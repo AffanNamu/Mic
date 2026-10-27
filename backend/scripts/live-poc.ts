@@ -198,7 +198,7 @@ async function finish(ok: boolean): Promise<never> {
     humanEvaluation: 'NOT DONE',
     note: 'Cost figures are rate-card estimates until reconciled against the provider invoice.',
   };
-  const outDir = join(here, '..', '..', 'docs', 'poc', 'results');
+  const outDir = process.env['POC_OUT_DIR'] ?? join(here, '..', '..', 'docs', 'poc', 'results');
   mkdirSync(outDir, { recursive: true });
   const file = join(outDir, `${stamp}-result.json`);
   // The result file is safe to commit: it holds no audio, no lyrics, no keys. Participant name is the operator's call.

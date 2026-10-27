@@ -4,6 +4,7 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync, statSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loadConfig } from '../src/config.ts';
+import { DEFAULT_TIMEOUTS } from '../src/worker.ts';
 import { FileBlobStore } from '../src/blobstore.ts';
 import { decryptBlob, encryptBlob, hashPassword, verifyPassword } from '../src/crypto.ts';
 import { openDb, runMigrations, one, run } from '../src/db.ts';
@@ -45,6 +46,12 @@ describe('configuration', () => {
     } catch (e) {
       assert.ok(!(e as Error).message.includes('too-short-secret'));
     }
+  });
+
+  it('the default lease outlasts the slowest single provider step, so a live worker never loses its own job', () => {
+    const c = loadConfig(goodEnv);
+    const slowest = Math.max(...Object.values(DEFAULT_TIMEOUTS));
+    assert.ok(c.leaseMs > slowest, `lease ${c.leaseMs} ms must exceed the slowest step ${slowest} ms`);
   });
 
   it('rejects unknown providers and non-numeric limits', () => {
