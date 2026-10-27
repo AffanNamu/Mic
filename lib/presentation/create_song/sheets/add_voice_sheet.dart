@@ -6,6 +6,7 @@ import '../../../application/providers.dart';
 import '../../../core/theme/deen_theme.dart';
 import '../../../domain/failures.dart';
 import '../../../domain/services.dart';
+import '../../../domain/voice/consent.dart';
 import '../../shared/dialogs.dart';
 
 /// Voice enrollment entry point: captures explicit consent, then uploads an
@@ -28,6 +29,7 @@ class _AddVoiceSheet extends ConsumerStatefulWidget {
 
 class _AddVoiceSheetState extends ConsumerState<_AddVoiceSheet> {
   final _name = TextEditingController(text: 'My Voice');
+  final _authorizedBy = TextEditingController();
   VoiceOwnership _ownership = VoiceOwnership.ownVoice;
   bool _consent = false;
   bool _busy = false;
@@ -36,10 +38,17 @@ class _AddVoiceSheetState extends ConsumerState<_AddVoiceSheet> {
   @override
   void dispose() {
     _name.dispose();
+    _authorizedBy.dispose();
     super.dispose();
   }
 
-  bool get _canSubmit => _consent && _name.text.trim().isNotEmpty && !_busy;
+  bool get _needsOwnerName => _ownership == VoiceOwnership.authorizedByOwner;
+
+  bool get _canSubmit =>
+      _consent &&
+      _name.text.trim().isNotEmpty &&
+      (!_needsOwnerName || _authorizedBy.text.trim().isNotEmpty) &&
+      !_busy;
 
   Future<void> _upload() async {
     setState(() {
@@ -47,6 +56,7 @@ class _AddVoiceSheetState extends ConsumerState<_AddVoiceSheet> {
       _error = null;
     });
     try {
+      final statements = ref.read(consentStatementsProvider).value;
       final picked = await ref.read(audioFilePickerProvider).pickAudio();
       if (picked == null || !mounted) return;
       await ref
@@ -59,6 +69,10 @@ class _AddVoiceSheetState extends ConsumerState<_AddVoiceSheet> {
               consent: VoiceConsent(
                 ownership: _ownership,
                 acceptedAt: DateTime.now().toUtc(),
+                statementVersion: statements?.version,
+                authorizedBy: _needsOwnerName
+                    ? _authorizedBy.text.trim()
+                    : null,
               ),
             ),
           );
@@ -78,8 +92,25 @@ class _AddVoiceSheetState extends ConsumerState<_AddVoiceSheet> {
     }
   }
 
+  /// The server's own wording when a backend is connected (it records a hash
+  /// of exactly this text); otherwise the local wording, which records no
+  /// version and cannot be submitted to a backend.
+  String _consentText(AsyncValue<ConsentStatements?> statements) {
+    final server = statements.value?.textFor(_ownership);
+    if (server != null) return server;
+    return _ownership == VoiceOwnership.ownVoice
+        ? 'This is my voice, and I agree to DeenVoice processing '
+              'this recording to create a voice profile. I can '
+              'revoke this and delete the voice at any time.'
+        : 'The speaker has given me explicit permission to create '
+              'and use a voice profile from this recording. I can '
+              'revoke this and delete the voice at any time.';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final statements = ref.watch(consentStatementsProvider);
+    final statementsFailed = statements.hasError;
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SafeArea(
@@ -128,6 +159,20 @@ class _AddVoiceSheetState extends ConsumerState<_AddVoiceSheet> {
                     ? null
                     : (s) => setState(() => _ownership = s.first),
               ),
+              if (_needsOwnerName) ...[
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _authorizedBy,
+                  enabled: !_busy,
+                  onChanged: (_) => setState(() {}),
+                  style: DeenText.input,
+                  decoration: const InputDecoration(
+                    labelText: 'Whose voice is this?',
+                    helperText: 'Their name, as they gave permission.',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
               const SizedBox(height: 10),
               CheckboxListTile(
                 contentPadding: EdgeInsets.zero,
@@ -136,24 +181,26 @@ class _AddVoiceSheetState extends ConsumerState<_AddVoiceSheet> {
                 onChanged: _busy
                     ? null
                     : (v) => setState(() => _consent = v ?? false),
-                title: Text(
-                  _ownership == VoiceOwnership.ownVoice
-                      ? 'This is my voice, and I agree to DeenVoice processing '
-                            'this recording to create a voice profile. I can '
-                            'revoke this and delete the voice at any time.'
-                      : 'The speaker has given me explicit permission to create '
-                            'and use a voice profile from this recording. I can '
-                            'revoke this and delete the voice at any time.',
-                  style: DeenText.body,
-                ),
+                title: Text(_consentText(statements), style: DeenText.body),
               ),
+              if (statementsFailed) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'The consent statement couldn’t be loaded, so a voice '
+                  'can’t be added right now.',
+                  style: DeenText.error,
+                ),
+              ],
               if (_error != null) ...[
                 const SizedBox(height: 6),
                 Text(_error!, style: DeenText.error),
               ],
               const SizedBox(height: 12),
               FilledButton.icon(
-                onPressed: _canSubmit ? _upload : null,
+                onPressed:
+                    _canSubmit && !statementsFailed && !statements.isLoading
+                    ? _upload
+                    : null,
                 icon: const Icon(LucideIcons.upload, size: 16),
                 label: Text(_busy ? 'Uploading…' : 'Upload a recording'),
               ),

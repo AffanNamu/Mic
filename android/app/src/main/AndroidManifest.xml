@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The app talks to the DeenVoice backend and streams songs from it. Flutter only adds
+         this permission to debug/profile builds, so a release build needs it declared here. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="DeenVoice"
         android:name="${applicationName}"

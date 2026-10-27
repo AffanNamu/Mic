@@ -23,3 +23,15 @@ final class ServiceNotConfigured extends AppFailure {
 final class ServiceFailure extends AppFailure {
   const ServiceFailure(super.message);
 }
+
+/// The backend no longer accepts the saved sign-in (expired or revoked).
+final class SessionExpired extends AppFailure {
+  const SessionExpired() : super('Your session has expired. Sign in again.');
+}
+
+/// The request could not reach the backend (offline, DNS, timeout). For a
+/// write this means the outcome is unknown, which callers must say honestly.
+final class ConnectionFailure extends AppFailure {
+  const ConnectionFailure()
+    : super('Couldn’t reach DeenVoice. Check your connection and try again.');
+}

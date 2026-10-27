@@ -16,7 +16,10 @@ abstract interface class VoiceRepository {
   /// profile in `enrolling` state.
   Future<VoiceProfile> enrollVoice(VoiceEnrollment enrollment);
 
-  Future<void> deleteVoice(String voiceId);
+  /// Deletes a voice. Returns a plain-language statement of what was and was
+  /// not removed (for example, that a provider keeps its own copy), or null if
+  /// there is nothing to add. The UI shows it as-is.
+  Future<String?> deleteVoice(String voiceId);
 }
 
 /// Audio plus the consent that makes it usable.
@@ -37,10 +40,22 @@ class VoiceEnrollment {
 enum VoiceOwnership { ownVoice, authorizedByOwner }
 
 class VoiceConsent {
-  const VoiceConsent({required this.ownership, required this.acceptedAt});
+  const VoiceConsent({
+    required this.ownership,
+    required this.acceptedAt,
+    this.statementVersion,
+    this.authorizedBy,
+  });
 
   final VoiceOwnership ownership;
   final DateTime acceptedAt;
+
+  /// Version of the server-owned consent statement the user was shown. Null
+  /// when no backend supplied one.
+  final String? statementVersion;
+
+  /// Who the voice belongs to, when it is not the signed-in user's own.
+  final String? authorizedBy;
 }
 
 abstract interface class CreditsRepository {

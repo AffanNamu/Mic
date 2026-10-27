@@ -22,7 +22,7 @@ class UnconfiguredVoiceRepository implements VoiceRepository {
       Future.error(const ServiceNotConfigured('Voice enrollment'));
 
   @override
-  Future<void> deleteVoice(String voiceId) =>
+  Future<String?> deleteVoice(String voiceId) =>
       Future.error(const ServiceNotConfigured('Voice management'));
 }
 

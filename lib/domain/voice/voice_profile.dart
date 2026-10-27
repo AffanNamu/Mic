@@ -28,6 +28,7 @@ class VoiceProfile {
     required this.supportsSinging,
     this.presentation,
     this.avatarUrl,
+    this.detail,
   });
 
   final String id;
@@ -40,6 +41,10 @@ class VoiceProfile {
   final bool supportsSinging;
   final VoicePresentation? presentation;
   final String? avatarUrl;
+
+  /// Why the voice is in its current state, in the service's own words (for
+  /// example why an enrollment failed). Shown as-is.
+  final String? detail;
 
   /// Whether the profile can be chosen for a song right now.
   bool get isSelectable => status == VoiceStatus.ready && supportsSinging;
@@ -76,7 +81,8 @@ class VoiceProfile {
       other.status == status &&
       other.supportsSinging == supportsSinging &&
       other.presentation == presentation &&
-      other.avatarUrl == avatarUrl;
+      other.avatarUrl == avatarUrl &&
+      other.detail == detail;
 
   @override
   int get hashCode => Object.hash(
@@ -87,5 +93,6 @@ class VoiceProfile {
     supportsSinging,
     presentation,
     avatarUrl,
+    detail,
   );
 }

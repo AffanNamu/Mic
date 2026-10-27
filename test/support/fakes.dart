@@ -34,8 +34,13 @@ class FakeVoiceRepository implements VoiceRepository {
   }
 
   @override
-  Future<void> deleteVoice(String voiceId) async =>
-      voices.removeWhere((v) => v.id == voiceId);
+  Future<String?> deleteVoice(String voiceId) async {
+    voices.removeWhere((v) => v.id == voiceId);
+    return deleteDisclosure;
+  }
+
+  /// What the (fake) service says it could not remove.
+  String? deleteDisclosure;
 }
 
 class FakeCreditsRepository implements CreditsRepository {

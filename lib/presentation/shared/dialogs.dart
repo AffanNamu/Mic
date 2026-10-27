@@ -43,3 +43,29 @@ Future<bool> confirmAction(
   );
   return result ?? false;
 }
+
+/// Shows a message that must be read, not a passing toast.
+Future<void> showInfoDialog(
+  BuildContext context, {
+  required String title,
+  required String message,
+}) {
+  return showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: DeenColors.panel,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: DeenColors.panelEdge),
+      ),
+      title: Text(title, style: DeenText.sheetTitle),
+      content: Text(message, style: DeenText.body),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('OK'),
+        ),
+      ],
+    ),
+  );
+}

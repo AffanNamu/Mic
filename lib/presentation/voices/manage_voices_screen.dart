@@ -110,10 +110,20 @@ class _VoiceTile extends ConsumerWidget {
     );
     if (!confirmed || !context.mounted) return;
     try {
-      await ref.read(voiceRepositoryProvider).deleteVoice(voice.id);
+      final disclosure = await ref
+          .read(voiceRepositoryProvider)
+          .deleteVoice(voice.id);
       ref.invalidate(voicesProvider);
-      if (context.mounted) {
+      if (!context.mounted) return;
+      if (disclosure == null) {
         showMessage(context, '${voice.displayName} was deleted.');
+      } else {
+        // Whatever the service could not remove must be read, not glimpsed.
+        await showInfoDialog(
+          context,
+          title: '${voice.displayName} was deleted',
+          message: disclosure,
+        );
       }
     } on AppFailure catch (e) {
       if (context.mounted) showMessage(context, e.message);
@@ -143,6 +153,8 @@ class _VoiceTile extends ConsumerWidget {
               children: [
                 Text(voice.displayName, style: DeenText.bodyStrong),
                 Text('$_kind · ${voice.subtitle}', style: DeenText.sectionHint),
+                if (voice.detail != null)
+                  Text(voice.detail!, style: DeenText.error),
               ],
             ),
           ),

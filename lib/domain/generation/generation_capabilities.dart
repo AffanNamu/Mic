@@ -16,6 +16,7 @@ class GenerationCapabilities {
     required this.languages,
     required this.voiceConditioning,
     required this.advancedOptionIds,
+    this.unavailableReason,
   });
 
   /// No engine connected: nothing can be generated.
@@ -35,5 +36,9 @@ class GenerationCapabilities {
   final bool voiceConditioning;
   final Set<String> advancedOptionIds;
 
-  bool get isAvailable => engineName != null;
+  /// Set when an engine exists but cannot take jobs right now (for example its
+  /// credentials were rejected). Shown to the user instead of a generic error.
+  final String? unavailableReason;
+
+  bool get isAvailable => engineName != null && unavailableReason == null;
 }

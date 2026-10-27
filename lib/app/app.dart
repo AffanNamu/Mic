@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../application/providers.dart';
+import '../application/session_controller.dart';
 import '../core/theme/deen_theme.dart';
+import '../presentation/auth/auth_screen.dart';
 import '../presentation/create_song/create_song_screen.dart';
+import '../presentation/library/library_home_screen.dart';
 
 class DeenVoiceApp extends StatelessWidget {
   const DeenVoiceApp({super.key});
@@ -22,7 +27,25 @@ class DeenVoiceApp extends StatelessWidget {
           child: child!,
         );
       },
-      home: const CreateSongScreen(),
+      home: const _Root(),
+    );
+  }
+}
+
+/// Without a backend (no API_BASE_URL) the app is the unconnected Create Song
+/// screen, exactly as before. With one, it requires a signed-in user.
+class _Root extends ConsumerWidget {
+  const _Root();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(apiBaseUrlProvider).isEmpty) return const CreateSongScreen();
+    final session = ref.watch(sessionProvider);
+    return session.when(
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (_, _) => const AuthScreen(),
+      data: (s) => s == null ? const AuthScreen() : const LibraryHomeScreen(),
     );
   }
 }

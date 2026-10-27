@@ -304,11 +304,28 @@ void main() {
         'Aisha',
       );
       await tester.pumpAndSettle();
+
+      // Without saying whose voice it is, the recording cannot be submitted.
+      FilledButton uploadButton() => tester.widget<FilledButton>(
+        find.ancestor(
+          of: find.text('Upload a recording'),
+          matching: find.bySubtype<FilledButton>(),
+        ),
+      );
+      expect(uploadButton().onPressed, isNull);
+
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Whose voice is this?'),
+        'Aisha Bello',
+      );
+      await tester.pumpAndSettle();
+      expect(uploadButton().onPressed, isNotNull);
       await tester.tap(find.text('Upload a recording'));
       await tester.pumpAndSettle();
 
       expect(repo.enrollments, hasLength(1));
       final e = repo.enrollments.single;
+      expect(e.consent.authorizedBy, 'Aisha Bello');
       expect(e.displayName, 'Aisha');
       expect(e.fileName, 'me.wav');
       expect(e.audio, [1, 2, 3, 4]);

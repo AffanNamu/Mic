@@ -12,6 +12,7 @@ import '../voices/manage_voices_screen.dart';
 import 'sheets/add_voice_sheet.dart';
 import 'sheets/credits_sheet.dart';
 import 'sheets/generation_result_sheet.dart';
+import 'sheets/job_progress_sheet.dart';
 import 'widgets/advanced_options_panel.dart';
 import 'widgets/create_song_header.dart';
 import 'widgets/generate_button.dart';
@@ -71,7 +72,13 @@ class _CreateSongScreenState extends ConsumerState<CreateSongScreen> {
         ref.read(generationControllerProvider.notifier).dismiss();
       case GenerationAccepted(:final receipt):
         ref.read(generationControllerProvider.notifier).dismiss();
-        showGenerationAcceptedSheet(context, receipt);
+        // With a backend connected the sheet follows the real job; without
+        // one (tests) it only reports the receipt.
+        if (ref.read(generationJobsProvider) != null) {
+          showJobProgressSheet(context, receipt);
+        } else {
+          showGenerationAcceptedSheet(context, receipt);
+        }
       case GenerationIdle() || GenerationSubmitting():
         break;
     }
