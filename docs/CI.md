@@ -1,9 +1,9 @@
 # CI/CD
 
 Four GitHub Actions workflows in `.github/workflows/`, adapted from the eSportlyic samples
-(Android, iOS, web deploy). `ci.yml` has run on GitHub and passed; the Android, iOS and web
-workflows are linted (actionlint + shellcheck) but **have not yet run** (they trigger on `main`,
-pull requests or manually). See "What is and is not verified".
+(Android, iOS, web deploy). All four have run on GitHub and passed on the current head (`128cfed`);
+only the browser-journey job of `ci.yml` and every signed or published path have not run there. See
+"What is and is not verified".
 
 | Workflow | Runs on | What it does |
 | --- | --- | --- |
@@ -76,34 +76,46 @@ If you reuse the web sample elsewhere: `--web-renderer html` no longer exists in
 
 ## What is and is not verified
 
-Ran on GitHub (run #1 of `ci.yml`, branch `ccr-936b65c0-6lt7lb`, commit `3240173`, `ubuntu-latest`):
-- **Flutter app: passed**: format, analyze, all tests, and the release web build (about 2.5 minutes).
-- **Backend: passed**: `npm ci`, typecheck and the full test suite on Node 22 (about 40 seconds).
-- **Browser journey: skipped, as designed** (it runs on `main` and on manual dispatch only), so it has
-  not run on GitHub yet. It passed in this repository's container.
+Ran on GitHub, branch `ccr-936b65c0-6lt7lb`, head commit `128cfed` (all `success`):
 
-Verified here:
+| Workflow (run id) | Runner | Result |
+| --- | --- | --- |
+| `ci.yml` #5 (40461742457) | `ubuntu-latest` | **Flutter app** passed in 172 s: format 1 s, analyze 12 s, all tests 71 s, release web compile. **Backend** passed in 57 s: typecheck and the full suite on Node 22 (34 s). **Browser journey: skipped, as designed** (it runs on `main` and on manual dispatch only). |
+| `android.yml` (40461750507) | `ubuntu-latest` | Release APK built in 220 s (the Gradle build step 154 s); APK signature verified; the 16 KB page-size alignment check passed. Uploaded as **"debug-signed APK (not publishable)"** because the repository has no keystore secret. The signed AAB and Play steps were skipped. |
+| `ios.yml` (40461753382) | `macos-26` | Release app compiled **without code signing** in 205 s (the build step 116 s). The signed IPA and TestFlight steps were skipped because no signing secrets exist. |
+| `web.yml` (40461756053) | `ubuntu-latest` | Release web build in 76 s (the build step 43 s) against the configured backend URL; uploaded as an artifact. No deploy step. |
+
+Earlier runs also passed: `ci.yml` #4 (commit `b9b5af3`, run 40460863445) and, dispatched by hand on commit
+`874b259`, Android (40447743438), iOS (40447797921) and web (40447822398).
+
+So on GitHub: the app, including the in-app recorder, the onboarding, the five-tab shell and account deletion,
+**compiles** for Android (release), iOS (release, unsigned) and web (release), and the Flutter and backend test
+suites pass on a clean machine.
+
+Verified here, in this repository's container:
 - All four files pass `actionlint` with `shellcheck` enabled.
 - The commands the workflows run for Flutter and the backend (format, analyze, test, `flutter build web`,
-  `npm ci`/typecheck/test, the browser journey) were run in this repository's container with the same
-  flags and passed.
+  `npm ci`/typecheck/test, the browser journey) were run with the same flags and passed.
 - `tool/check_16kb_alignment.sh` was tested on libraries built with 4 KB and 16 KB alignment (detects
-  both, ignores 32-bit, `--strict` exits 1).
+  both, ignores 32-bit, `--strict` exits 1), and it passed on the real APK on GitHub.
 - The iOS profile-specifier patch was run against the real `project.pbxproj`: it changes exactly the three
   Runner configurations and not `RunnerTests`, and survives a profile name containing quotes and slashes.
 
-**Not verified** (no Android SDK or macOS here, and these workflows have not been triggered on GitHub):
-- `android.yml`, `ios.yml`, `web.yml` and the browser-journey job of `ci.yml` have not run on GitHub. They
-  trigger on pull requests (Android, web), `main`, or manual dispatch; opening a pull request will run the
-  Android and web ones.
-- The Gradle signing change (`android/app/build.gradle.kts`) has not been built. It is the standard
-  `key.properties`/env pattern, but the first Android CI run is its first test.
-- The iOS signing flow, the `macos-26` runner label and its Xcode version, `PlistBuddy` parsing of the
-  profile, and `altool` upload. These follow the fixes in your working sample but have not run for DeenVoice.
-- `GITHUB_ENV`-passing of secrets-derived values and the `secrets.X != ''` flags only behave as intended
-  on GitHub.
+**Not verified:**
+- **Nothing has run on a phone.** A compiled APK or app bundle says the code builds, not that the recorder, the
+  microphone permission prompt, audio playback or the screens behave on a device. Recording was driven only in
+  Chromium with a fake microphone (a tone).
+- **The browser-journey job** of `ci.yml` has not run on GitHub (it needs `main` or a manual dispatch); it passed
+  in this container.
+- **Signed builds.** The Android build is debug-signed and the iOS build unsigned. The signing paths (Gradle
+  `key.properties`/environment keystore, the signed AAB, the iOS provisioning-profile patch, `PlistBuddy`
+  parsing of the profile, the signed IPA and `altool` upload to TestFlight) were skipped for lack of secrets and
+  have not run for DeenVoice. They follow the fixes in your working sample.
+- **No web deploy**, and no deploy of the backend.
+- `GITHUB_ENV`-passing of secrets-derived values and the `secrets.X != ''` flags were exercised only on their
+  "no secret" side.
 
-If any workflow fails on its first run, send me the log; the likely suspects are listed above.
+If a signed run fails once the secrets are added, send me the log; the likely suspects are listed above.
 
 ## Not included
 

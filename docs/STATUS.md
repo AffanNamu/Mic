@@ -102,8 +102,10 @@ Notes).
 | Backend: auth, database, migrations, encrypted private storage, jobs, ledger, account deletion | **Real** ([BACKEND.md](BACKEND.md)); 189 tests. Single-node SQLite. |
 | Webhooks, payments | **Missing** |
 | Web build (release) | **Real**; built and driven in Chromium. |
-| Android build / device test | **Not run.** The container has no Android SDK (`flutter build apk` → "No Android SDK found"). The release manifest now declares `INTERNET` (needed to reach the backend); cleartext `http://` backends need `usesCleartextTraffic` and are for development only. |
-| iOS build / device test | **Not run.** Requires macOS and Xcode. |
+| Android build | **Compiles on GitHub.** The container has no Android SDK, but `android.yml` built the release APK on `ubuntu-latest` at head `128cfed` (signature verified, 16 KB alignment check passed). It is **debug-signed and not publishable**: there is no release keystore. The release manifest declares `INTERNET` (needed to reach the backend); cleartext `http://` backends need `usesCleartextTraffic` and are for development only. |
+| Android device test | **Not run.** No APK has been installed or opened on a phone or emulator. |
+| iOS build | **Compiles on GitHub, unsigned.** `ios.yml` built the release app with `--no-codesign` on `macos-26` at head `128cfed`. No signing secrets, so no IPA and no TestFlight upload. |
+| iOS device test | **Not run.** Nothing has run on an iPhone or simulator. |
 | Store compliance | **Partly.** Account deletion in the app and on the server exists (an app-store requirement). **Not done:** published Terms of Service and Privacy Policy pages (the app links to them only if the build supplies URLs), a data-safety / privacy-label declaration, and age rating. |
 | Launcher icons (Android/iOS) | **Missing.** Platform projects still use the Flutter default icon; the source art is `assets/brand/deenvoice_icon.png` (web icons are generated from it). |
 | Microphone permissions (Android/iOS) | **Declared** (`RECORD_AUDIO`, `NSMicrophoneUsageDescription`), never exercised on a device. A refusal is shown to the user with a retry. |

@@ -357,5 +357,8 @@ run of the app itself (the GitHub build workflows below only compile it).
 
 ## What the GitHub workflows have shown
 
-See [CI.md](CI.md#what-is-and-is-not-verified): the Android release APK, the unsigned iOS build and the web build compiled on
-GitHub before in-app recording was added; they are re-run on the current head and the result recorded there.
+See [CI.md](CI.md#what-is-and-is-not-verified): at head `128cfed`, with in-app recording included, `ci.yml` (Flutter
+format/analyze/tests/web compile, backend typecheck/tests), the Android release APK (debug-signed, signature and 16 KB
+alignment checked), the unsigned iOS build on `macos-26` and the web build all succeeded on GitHub. That shows the code
+compiles and the test suites pass on clean machines. It does not show the app working on a phone: no device run exists, and
+the browser-journey job and every signed or published path have not run on GitHub.
