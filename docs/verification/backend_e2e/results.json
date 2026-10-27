@@ -1,10 +1,10 @@
 {
-  "when": "2026-10-27T05:09:09.200Z",
+  "when": "2026-10-27T06:08:05.825Z",
   "provider": "test-double (synthetic tone)",
   "results": [
     [
       "PASS",
-      "signed out: sign-in is shown instead of the app"
+      "first launch: the introduction, then the welcome screen"
     ],
     [
       "PASS",
@@ -12,7 +12,7 @@
     ],
     [
       "PASS",
-      "operator grants credits; after a reload the session persisted and the balance is real"
+      "operator grants credits; after a reload the session persisted, the introduction does not return, and the balance is real"
     ],
     [
       "PASS",
@@ -36,6 +36,10 @@
     ],
     [
       "PASS",
+      "the draft survives closing the app: Home offers it, and Continue brings the words back"
+    ],
+    [
+      "PASS",
       "choose English, then Generate: a real job is created and followed"
     ],
     [
@@ -48,7 +52,15 @@
     ],
     [
       "PASS",
-      "after a full reload the song is still in the library and plays again"
+      "after a full reload the song is on Home and plays again; the bell says a song finished"
+    ],
+    [
+      "PASS",
+      "Activity lists the finished song from the server, and opening it clears the bell"
+    ],
+    [
+      "PASS",
+      "Library and My Voice show the real data; the Home shortcuts and bottom bar switch between them"
     ],
     [
       "PASS",
@@ -56,7 +68,7 @@
     ],
     [
       "PASS",
-      "sign out returns to sign-in"
+      "sign out asks first, ends the session, and erases the draft and activity marker from the device"
     ],
     [
       "PASS",
@@ -76,5 +88,5 @@
       "type": "audio/wav"
     }
   ],
-  "sha": "230067d5a0bd"
+  "sha": "f9c944d20bc7"
 }

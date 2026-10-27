@@ -47,7 +47,7 @@ export function renameSong(deps: Deps, userId: string, songId: string, titleRaw:
 export async function deleteSong(deps: Deps, userId: string, songId: string): Promise<void> {
   const song = ownedSong(deps, userId, songId);
   await deps.blobs.delete(String(song['audio_blob_key']));
-  run(deps.db, `UPDATE songs SET deleted_at = ?, title = '', lyrics = '' WHERE id = ?`, iso(deps.clock.now()), songId);
+  run(deps.db, `UPDATE songs SET deleted_at = ?, title = '', lyrics = '', voice_name = NULL WHERE id = ?`, iso(deps.clock.now()), songId);
   audit(deps.db, deps.clock, { userId, kind: 'song.deleted', subjectType: 'song', subjectId: songId });
 }
 

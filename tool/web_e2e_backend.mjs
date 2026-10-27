@@ -1,6 +1,7 @@
 // Drives the Flutter web build against a REAL local DeenVoice backend in a real browser:
-// sign up → refresh (session persists) → add a voice with server consent → generate → follow the
-// job → play → reopen from the library after a reload → sign out/in.
+// first launch (introduction) → sign up → refresh (session persists) → add a voice with server consent,
+// uploaded and recorded from a fake microphone → draft survives a reload → generate → follow the job
+// → play → Home, Activity, Library, My Voice and Profile from the real data → sign out (and what it erases).
 //
 // !! The music provider behind the backend is the labelled TEST DOUBLE (a synthetic tone). !!
 // This proves the app ↔ API ↔ job pipeline ↔ storage ↔ playback wiring. It is NOT evidence that any
@@ -117,15 +118,28 @@ const typeInto = async (name, text) => {
 };
 const btn = (name) => page.getByRole('button', { name, exact: false }).first();
 const click = async (name) => { await btn(name).click({ force: true }); await page.waitForTimeout(500); };
+// The bottom bar's items have exactly these labels; other controls merely contain them.
+const nav = async (name) => { await page.getByRole('button', { name, exact: true }).last().click({ force: true }); await page.waitForTimeout(500); };
 const semanticsText = () => page.evaluate(() => [...document.querySelectorAll('flt-semantics')].map((e) => e.getAttribute('aria-label') || e.textContent || '').join(' | '));
 
 await boot();
 
-await step('signed out: sign-in is shown instead of the app', async () => {
-  await visible('Welcome back');
-  await shot('sign_in');
+await step('first launch: the introduction, then the welcome screen', async () => {
+  await visible('Songs in your own voice');
+  await shot('onboarding_1');
+  await click('Next');
+  await visible('Only voices you may use');
+  await click('Next');
+  await visible('Hausa, Arabic and English');
+  await shot('onboarding_3');
+  await click('Get started');
+  await visible('Welcome Back');
+  await visible('aren’t available yet'); // Google / Apple are shown disabled, and say so
+  await shot('welcome');
 });
 await step('create an account (10+ char password enforced client-side first)', async () => {
+  await click('Continue with Email');
+  await visible('Sign in with email');
   await click('Create a new account');
   await typeInto('Email', 'participant@example.com');
   await typeInto('Password', 'short');
@@ -135,20 +149,29 @@ await step('create an account (10+ char password enforced client-side first)', a
   await page.keyboard.press('Control+A'); await page.keyboard.press('Backspace');
   await page.keyboard.type('a sound password 123', { delay: 30 });
   await click('Create account');
-  await visible('My Songs');
+  await visible('Create a Song');
+  await visible('Recent Songs');
   await visible('No songs yet');
-  await shot('library_empty');
+  await gone('Continue Your Work');
+  await shot('home_empty');
 });
-await step('operator grants credits; after a reload the session persisted and the balance is real', async () => {
+await step('operator grants credits; after a reload the session persisted, the introduction does not return, and the balance is real', async () => {
   const g = await fetch(`${API}/v1/admin/credits/grant`, { method: 'POST', headers: admin, body: JSON.stringify({ email: 'participant@example.com', amount: 3, note: 'e2e' }) });
   if (g.status !== 200) throw new Error(`grant failed ${g.status}`);
   await boot();
-  await visible('My Songs');
-  await gone('Welcome back');
-  await visible('3 credits');
+  await visible('Create a Song');
+  await gone('Welcome Back');
+  await gone('Songs in your own voice');
+  await click('Profile');
+  await visible('participant@example.com');
+  await visible('3 credits available');
+  await visible('Not published yet'); // no Terms / Privacy page is configured in this build
+  await shot('profile');
+  await click('Back');
+  await visible('Create a Song');
 });
 await step('Create Song: no voices yet, honest; engine named; Hausa (the default) is refused by capabilities', async () => {
-  await click('New song');
+  await click('Create a Song');
   await visible('Generate Song');
   await visible('You have no saved voices yet');
   await shot('create_song_connected');
@@ -216,6 +239,19 @@ await step('Generate with the default language (Hausa) is refused: this engine d
   await visible('doesn’t support Hausa', 6000).catch(async () => { await visible('Hausa', 2000); });
   await shot('hausa_refused');
 });
+await step('the draft survives closing the app: Home offers it, and Continue brings the words back', async () => {
+  await page.waitForTimeout(900); // the draft is saved shortly after the last edit
+  const stored = await page.evaluate(() => localStorage.getItem('flutter.deenvoice.draft.v1'));
+  if (!stored || !stored.includes('My first nasheed')) throw new Error(`draft not stored: ${stored}`);
+  await boot();
+  await visible('Continue Your Work');
+  await visible('My first nasheed');
+  await shot('home_continue_work');
+  await click('Continue');
+  await visible('Generate Song');
+  // The lyrics counter reads the restored text's length ("Original words about gratitude and light").
+  await visible('40/3000');
+});
 await step('choose English, then Generate: a real job is created and followed', async () => {
   await btn('Language: Hausa').click({ force: true }).catch(() => click('Language'));
   await page.waitForTimeout(700);
@@ -258,28 +294,59 @@ await step('the media link itself is private: without the signature the audio is
   const bare = mediaResponses.length ? await fetch(`${API}/media/songs/does-not-matter`) : null;
   if (!bare || bare.status !== 403) throw new Error(`unsigned request returned ${bare?.status}`);
 });
-await step('after a full reload the song is still in the library and plays again', async () => {
+await step('after a full reload the song is on Home and plays again; the bell says a song finished', async () => {
   await boot();
-  await visible('My Songs');
-  await visible('Your songs');
-  await visible('My first nasheed');
+  await visible('Recent Songs');
+  await visible('Open My first nasheed');
+  await visible('Activity, 1 new');
+  await shot('home_with_song');
   await click('Open My first nasheed');
   await visible('Made with test-double');
   await click('Play'); await page.waitForTimeout(2500);
   const m = /(\d+):(\d\d) \/ (\d+):(\d\d)/.exec(await semanticsText());
   if (!m || Number(m[1]) * 60 + Number(m[2]) < 1) throw new Error('did not play after reload');
-  await shot('reopened_from_library');
+  await shot('reopened_from_home');
+  await click('Back');
+  await visible('Recent Songs');
+});
+await step('Activity lists the finished song from the server, and opening it clears the bell', async () => {
+  await click('Activity');
+  await visible('“My first nasheed” is ready');
+  await shot('activity');
+  await click('Back');
+  await visible('Recent Songs');
+  await gone('Activity, 1 new');
+  const seen = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.includes('deenvoice.activity.seen')));
+  if (!seen.length) throw new Error('the last-seen time was not stored');
+});
+await step('Library and My Voice show the real data; the Home shortcuts and bottom bar switch between them', async () => {
+  await nav('Library');
+  await visible('My Library');
+  await visible('My first nasheed');
+  await shot('library');
+  await nav('My Voice');
+  await visible('Record or upload your voice');
+  await visible('Personal voice');
+  await shot('my_voice');
+  await nav('Home');
+  await visible('Create a Song');
 });
 await step('credits: one reserved then captured (3 → 2)', async () => {
   const me = await fetch(`${API}/v1/admin/metrics`, { headers: admin }).then((r) => r.json());
   if (me.jobs.completed !== 1) throw new Error(`metrics jobs: ${JSON.stringify(me.jobs)}`);
-  await page.keyboard.press('Escape'); await page.goBack().catch(() => {});
-  await boot(); await visible('2 credits');
+  await boot();
+  await click('Profile');
+  await visible('2 credits available');
+  await click('Back');
 });
-await step('sign out returns to sign-in', async () => {
-  await click('Menu'); await page.waitForTimeout(400);
-  await page.getByRole('menuitem', { name: 'Sign out' }).click({ force: true });
-  await visible('Welcome back');
+await step('sign out asks first, ends the session, and erases the draft and activity marker from the device', async () => {
+  await click('Profile');
+  await click('Sign out');
+  await visible('Sign out?');
+  await page.getByRole('button', { name: 'Sign out' }).last().click({ force: true });
+  await visible('Welcome Back');
+  const left = await page.evaluate(() => Object.keys(localStorage).filter((k) => /deenvoice\.(draft|activity|session)/.test(k)));
+  if (left.length) throw new Error(`still on the device after sign-out: ${left.join(', ')}`);
   await shot('signed_out_again');
 });
 

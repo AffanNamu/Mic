@@ -10,6 +10,7 @@ import * as ledger from './ledger.ts';
 import * as voices from './voices.ts';
 import * as jobs from './jobs.ts';
 import * as songs from './songs.ts';
+import * as account from './account.ts';
 import { allConsentStatements } from './consent.ts';
 import { metrics } from './metrics.ts';
 import { audit } from './audit.ts';
@@ -36,6 +37,8 @@ export function buildApp(deps: Deps): FastifyInstance {
   const registerLimit = new RateLimiter(clock, 5, 60_000);
   const jobLimit = new RateLimiter(clock, 20, 60_000);
   const uploadLimit = new RateLimiter(clock, 10, 60_000);
+  // Keyed by account: a stolen session token must not be able to guess the password here.
+  const deleteLimit = new RateLimiter(clock, 5, 60_000);
 
   void app.register(cors, {
     origin: config.corsOrigins.length ? config.corsOrigins : false,
@@ -157,6 +160,13 @@ export function buildApp(deps: Deps): FastifyInstance {
     api.get('/me', async (req) => {
       const row = one(db, 'SELECT id, email, created_at FROM users WHERE id = ?', uid(req))!;
       return { userId: String(row['id']), email: String(row['email']), createdAt: String(row['created_at']), credits: ledger.balance(db, uid(req)) };
+    });
+
+    api.delete('/me', {
+      schema: { body: { type: 'object', required: ['password'], additionalProperties: false, properties: { password: str(200) } } },
+    }, async (req) => {
+      if (!deleteLimit.allow(uid(req))) throw new AppError(429, 'rate_limited', 'Too many attempts. Wait a minute.');
+      return account.deleteAccount(deps, uid(req), (req.body as { password: string }).password);
     });
 
     api.get('/credits', async (req) => ledger.balance(db, uid(req)));

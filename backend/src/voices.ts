@@ -217,7 +217,7 @@ export async function deleteVoice(
   tx(deps.db, () => {
     const now = iso(deps.clock.now());
     for (const s of songRows) {
-      run(deps.db, `UPDATE songs SET deleted_at = ?, title = '', lyrics = '' WHERE id = ?`, now, String(s['id']));
+      run(deps.db, `UPDATE songs SET deleted_at = ?, title = '', lyrics = '', voice_name = NULL WHERE id = ?`, now, String(s['id']));
     }
     // Jobs that never started are cancelled; their holds are released.
     run(deps.db,
