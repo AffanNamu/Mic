@@ -1,8 +1,9 @@
 # CI/CD
 
 Four GitHub Actions workflows in `.github/workflows/`, adapted from the eSportlyic samples
-(Android, iOS, web deploy). They are **linted** (actionlint + shellcheck) but **have not yet
-run on GitHub** — the first run is the real test. See "What is and is not verified".
+(Android, iOS, web deploy). `ci.yml` has run on GitHub and passed; the Android, iOS and web
+workflows are linted (actionlint + shellcheck) but **have not yet run** (they trigger on `main`,
+pull requests or manually). See "What is and is not verified".
 
 | Workflow | Runs on | What it does |
 | --- | --- | --- |
@@ -74,6 +75,12 @@ If you reuse the web sample elsewhere: `--web-renderer html` no longer exists in
 
 ## What is and is not verified
 
+Ran on GitHub (run #1 of `ci.yml`, branch `ccr-936b65c0-6lt7lb`, commit `3240173`, `ubuntu-latest`):
+- **Flutter app: passed**: format, analyze, all tests, and the release web build (about 2.5 minutes).
+- **Backend: passed**: `npm ci`, typecheck and the full test suite on Node 22 (about 40 seconds).
+- **Browser journey: skipped, as designed** (it runs on `main` and on manual dispatch only), so it has
+  not run on GitHub yet. It passed in this repository's container.
+
 Verified here:
 - All four files pass `actionlint` with `shellcheck` enabled.
 - The commands the workflows run for Flutter and the backend (format, analyze, test, `flutter build web`,
@@ -84,7 +91,10 @@ Verified here:
 - The iOS profile-specifier patch was run against the real `project.pbxproj`: it changes exactly the three
   Runner configurations and not `RunnerTests`, and survives a profile name containing quotes and slashes.
 
-**Not verified** (no Android SDK, no macOS, no GitHub run available here):
+**Not verified** (no Android SDK or macOS here, and these workflows have not been triggered on GitHub):
+- `android.yml`, `ios.yml`, `web.yml` and the browser-journey job of `ci.yml` have not run on GitHub. They
+  trigger on pull requests (Android, web), `main`, or manual dispatch; opening a pull request will run the
+  Android and web ones.
 - The Gradle signing change (`android/app/build.gradle.kts`) has not been built. It is the standard
   `key.properties`/env pattern, but the first Android CI run is its first test.
 - The iOS signing flow, the `macos-26` runner label and its Xcode version, `PlistBuddy` parsing of the
