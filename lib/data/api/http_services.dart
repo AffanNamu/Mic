@@ -228,6 +228,7 @@ class HttpSongGenerationService implements SongGenerationService {
       advancedOptionIds: {
         for (final v in asList(j['advancedOptionIds'])) v as String,
       },
+      voiceSampleSeconds: _sampleSeconds(j['voiceSampleSeconds']),
       unavailableReason: flag(j, 'available')
           ? null
           : '$engine is temporarily unavailable. Please try again later.',
@@ -280,6 +281,12 @@ class HttpSongGenerationService implements SongGenerationService {
       );
     }
   }
+}
+
+({int min, int max})? _sampleSeconds(Object? v) {
+  if (v == null) return null;
+  final o = asObject(v);
+  return (min: integer(o, 'min'), max: integer(o, 'max'));
 }
 
 class HttpGenerationJobs implements GenerationJobs {

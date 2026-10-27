@@ -17,6 +17,7 @@ class GenerationCapabilities {
     required this.voiceConditioning,
     required this.advancedOptionIds,
     this.unavailableReason,
+    this.voiceSampleSeconds,
   });
 
   /// No engine connected: nothing can be generated.
@@ -39,6 +40,9 @@ class GenerationCapabilities {
   /// Set when an engine exists but cannot take jobs right now (for example its
   /// credentials were rejected). Shown to the user instead of a generic error.
   final String? unavailableReason;
+
+  /// How long a voice recording must be for this engine, when it says so.
+  final ({int min, int max})? voiceSampleSeconds;
 
   bool get isAvailable => engineName != null && unavailableReason == null;
 }

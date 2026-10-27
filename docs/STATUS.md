@@ -30,7 +30,7 @@ Nothing in this document is marked Real unless it was run.
 | Voice selection | **Real (test double)** | Shows only voices the backend returns. Not-ready and speech-only voices cannot be chosen, with an explanation. Enrolling voices refresh until ready. |
 | Manage Voices | **Real (test double)** | List and delete with confirmation; after deletion the app shows what the provider could *not* remove. Without a backend: empty state. |
 | Add New Voice (upload) | **Real (test double)** | The consent wording is the **server's**, shown verbatim; its version is recorded server-side. "Someone who allowed me" requires the speaker's name. Recording is validated server-side (type, size, 5–15 s). Without a backend: "not connected". |
-| Add New Voice (record in app) | **Missing** | Shown as unavailable. Needs microphone capture and permissions. |
+| Add New Voice (record in app) | **Real (verified on web only)** | Records 16-bit mono WAV through the `record` package, shows time and a live level, enforces the engine's stated length (5–15 s here; 5–30 s if none is stated), lets you listen back, and refuses a too-short or silent take with the reason. Nothing leaves the device until you choose Use this recording and the consent boxes are ticked. Driven in real Chromium with a **fake microphone** (a tone): captured, accepted by the backend, enrolled. **Not run on an Android or iOS device**; no human voice has been recorded in a browser here. |
 | Credits balance / credits entry point | **Real (test double)** | Pill, sheet and library show the server's ledger balance. Credits are granted by an operator. Buying credits is **Missing**. |
 | Write with AI | **Boundary** | Sheet, topic input, reviewable suggestion, confirm-before-replace. Today: "The lyrics assistant is not connected in this build yet." |
 | AI Improve | **Boundary** | Review sheet (suggestion vs yours) before anything changes. Same "not connected" today. |
@@ -86,7 +86,7 @@ Nothing in this document is marked Real unless it was run.
 | Android build / device test | **Not run.** The container has no Android SDK (`flutter build apk` → "No Android SDK found"). The release manifest now declares `INTERNET` (needed to reach the backend); cleartext `http://` backends need `usesCleartextTraffic` and are for development only. |
 | iOS build / device test | **Not run.** Requires macOS and Xcode. |
 | Launcher icons (Android/iOS) | **Missing.** Platform projects still use the Flutter default icon; the source art is `assets/brand/deenvoice_icon.png` (web icons are generated from it). |
-| Microphone permissions (Android/iOS) | **Not added**, because recording is not implemented. |
+| Microphone permissions (Android/iOS) | **Declared** (`RECORD_AUDIO`, `NSMicrophoneUsageDescription`), never exercised on a device. A refusal is shown to the user with a retry. |
 
 ## Known deviations from the reference
 

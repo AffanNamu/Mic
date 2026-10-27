@@ -44,7 +44,8 @@ songs with AI, including singing in a user's own authorized voice.
 
 A verified real provider integration (the Mureka contract and voice-cloning path are
 unconfirmed), any Hausa or Arabic singing result, a lyrics assistant, payments/buying
-credits, in-app recording, webhooks, Google/Apple sign-in, and Android/iOS verification.
+credits, webhooks, Google/Apple sign-in, and Android/iOS verification (in-app recording is built and
+verified on web with a fake microphone, not on a device).
 See [docs/ACCEPTANCE_PHASE2.md](docs/ACCEPTANCE_PHASE2.md) and
 [docs/ASSESSMENT.md](docs/ASSESSMENT.md).
 

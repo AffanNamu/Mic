@@ -61,9 +61,12 @@ function wav(seconds, hz = 200, rate = 16000) {
 const samplePath = join(tmpdir(), 'deenvoice-e2e-sample.wav');
 await writeFile(samplePath, wav(10));
 
+// The microphone is a Chromium fake device that loops the tone file above, so "recording" captures real
+// browser audio through the real Web Audio path (not a stub in the app), but the sound is a tone, not a voice.
 const browser = await chromium.launch({
-  args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
-const context = await browser.newContext({ viewport: { width: 426, height: 923 }, deviceScaleFactor: 2 });
+  args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required',
+    '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', `--use-file-for-fake-audio-capture=${samplePath}`] });
+const context = await browser.newContext({ viewport: { width: 426, height: 923 }, deviceScaleFactor: 2, permissions: ['microphone'] });
 const page = await context.newPage();
 const errors = [];
 const mediaResponses = [];
@@ -167,6 +170,44 @@ await step('uploading a sample enrolls a voice; it shows Processing… then beco
   await shot('voice_processing');
   await visible('Personal voice', 20000);
   await shot('voice_ready');
+});
+await step('recording in the app: Record now captures real microphone audio, is reviewed, and enrolls a second voice', async () => {
+  const sessionToken = await page.evaluate(() => {
+    const raw = localStorage.getItem('flutter.deenvoice.session.v1');
+    return raw ? JSON.parse(JSON.parse(raw)).token ?? null : null;
+  });
+  const voicesBefore = sessionToken
+    ? (await fetch(`${API}/v1/voices`, { headers: { authorization: `Bearer ${sessionToken}` } }).then((r) => r.json())).voices.length
+    : null;
+  await click('Add New Voice');
+  await visible('This is my own voice. I agree that DeenVoice may store this recording');
+  await page.getByRole('checkbox').first().click({ force: true }).catch(async () => { await page.getByText('This is my own voice').first().click({ force: true }); });
+  await page.waitForTimeout(500);
+  await click('Record now');
+  await visible('A clean sample works best');
+  await visible('Record 5 seconds to 15 seconds.');
+  await shot('recorder_ready');
+  await click('Start recording');
+  await visible('Keep going until at least 0:05', 6000);
+  await page.waitForTimeout(1500);
+  await shot('recorder_recording');
+  await visible('Long enough', 12000);
+  if (process.env.DEBUG_SEMANTICS) {
+    console.log('   STOP NODES:', JSON.stringify(await page.evaluate(() => [...document.querySelectorAll('flt-semantics')].filter((e) => /Stop|Start/.test(e.getAttribute('aria-label') || '')).map((e) => ({ role: e.getAttribute('role'), label: e.getAttribute('aria-label'), rect: JSON.stringify(e.getBoundingClientRect()), hidden: e.getAttribute('aria-hidden') })))));
+  }
+  await click('Stop recording');
+  await visible('Your recording', 8000);
+  await shot('recorder_review');
+  const gone2 = await present('We barely heard anything');
+  if (gone2) throw new Error('the fake microphone tone was judged silent');
+  await click('Use this recording');
+  await visible('Voice submitted', 8000);
+  await visible('Personal voice', 20000);
+  if (sessionToken) {
+    const after = (await fetch(`${API}/v1/voices`, { headers: { authorization: `Bearer ${sessionToken}` } }).then((r) => r.json())).voices.length;
+    if (after !== voicesBefore + 1) throw new Error(`expected one more voice on the server, had ${voicesBefore}, now ${after}`);
+  }
+  await shot('recorded_voice_enrolled');
 });
 await step('Generate with the default language (Hausa) is refused: this engine does not support it', async () => {
   await typeInto('Song title', 'My first nasheed');

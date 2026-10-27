@@ -2,11 +2,13 @@
 // exercise the app's own behaviour (screens, state, error handling). They are
 // not evidence that any backend or provider works.
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:deenvoice/domain/auth/auth.dart';
 import 'package:deenvoice/domain/failures.dart';
 import 'package:deenvoice/domain/library/library.dart';
 import 'package:deenvoice/domain/playback/audio_player_port.dart';
+import 'package:deenvoice/domain/recording/voice_recorder.dart';
 import 'package:deenvoice/domain/services.dart';
 import 'package:deenvoice/domain/voice/consent.dart';
 
@@ -216,6 +218,16 @@ class FakeAudioPlayer implements AudioPlayerPort {
     );
   }
 
+  Uint8List? loadedBytes;
+
+  @override
+  Future<void> loadBytes(Uint8List bytes, {required String mimeType}) async {
+    if (loadError != null) throw loadError!;
+    loadedBytes = bytes;
+    events.add('loadBytes');
+    emit(_state.copyWith(loaded: true, duration: const Duration(seconds: 8)));
+  }
+
   @override
   Future<void> play() async {
     events.add('play');
@@ -240,3 +252,51 @@ class FakeAudioPlayer implements AudioPlayerPort {
     await _controller.close();
   }
 }
+
+/// A microphone the test controls. Nothing here records anything.
+class FakeVoiceRecorder implements VoiceRecorder {
+  final _progress = StreamController<RecorderProgress>.broadcast();
+
+  /// Thrown by [start] when set (e.g. `MicrophoneUnavailable()`).
+  Object? startError;
+  Object? stopError;
+  RecordedVoice result = fakeRecording();
+  var starts = 0;
+  var stops = 0;
+  var cancels = 0;
+  var disposed = false;
+
+  void emit(Duration elapsed, [double level = 0.5]) =>
+      _progress.add(RecorderProgress(elapsed: elapsed, level: level));
+
+  @override
+  Future<Stream<RecorderProgress>> start() async {
+    starts++;
+    if (startError != null) throw startError!;
+    return _progress.stream;
+  }
+
+  @override
+  Future<RecordedVoice> stop() async {
+    stops++;
+    if (stopError != null) throw stopError!;
+    return result;
+  }
+
+  @override
+  Future<void> cancel() async => cancels++;
+
+  @override
+  Future<void> dispose() async => disposed = true;
+}
+
+RecordedVoice fakeRecording({
+  Duration duration = const Duration(seconds: 8),
+  double peak = 0.7,
+  double average = 0.4,
+}) => RecordedVoice(
+  wav: wavFromPcm16(Uint8List(duration.inSeconds * 1000), sampleRate: 500),
+  duration: duration,
+  peakLevel: peak,
+  averageLevel: average,
+);

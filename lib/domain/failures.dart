@@ -35,3 +35,19 @@ final class ConnectionFailure extends AppFailure {
   const ConnectionFailure()
     : super('Couldn’t reach DeenVoice. Check your connection and try again.');
 }
+
+/// The microphone cannot be used: permission was refused or no input exists.
+final class MicrophoneUnavailable extends AppFailure {
+  const MicrophoneUnavailable([
+    super.message =
+        'DeenVoice can’t use the microphone. Allow microphone access in your '
+        'browser or phone settings, then try again.',
+  ]);
+}
+
+/// Recording started but could not be completed.
+final class RecordingFailed extends AppFailure {
+  const RecordingFailed([
+    super.message = 'The recording couldn’t be completed. Please try again.',
+  ]);
+}

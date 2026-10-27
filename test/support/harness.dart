@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:deenvoice/app/app.dart';
 import 'package:deenvoice/application/providers.dart';
+import 'package:deenvoice/application/recording_controller.dart';
 import 'package:deenvoice/domain/services.dart';
 import 'package:deenvoice/presentation/create_song/widgets/voice_selector.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +14,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fakes.dart';
+import 'fakes_backend.dart';
 
 /// The reference frame: 852 × 1846 px at 2x.
 const referenceLogicalSize = Size(426, 923);
@@ -52,6 +54,7 @@ class TestEnv {
     SongGenerationService? generation,
     TextFilePicker? textPicker,
     AudioFilePicker? audioPicker,
+    this.recorder,
     this.useReferenceAvatars = false,
   }) : voices = voices ?? FakeVoiceRepository(const []),
        credits = credits ?? FakeCreditsRepository(0),
@@ -68,7 +71,14 @@ class TestEnv {
   final AudioFilePicker audioPicker;
   final bool useReferenceAvatars;
 
+  /// When set, in-app recording uses this microphone and a fake audio player.
+  final FakeVoiceRecorder? recorder;
+
   List<Override> get overrides => [
+    if (recorder != null) ...[
+      voiceRecorderFactoryProvider.overrideWithValue(() => recorder!),
+      audioPlayerFactoryProvider.overrideWithValue(FakeAudioPlayer.new),
+    ],
     voiceRepositoryProvider.overrideWithValue(voices),
     creditsRepositoryProvider.overrideWithValue(credits),
     lyricsAssistantProvider.overrideWithValue(lyrics),

@@ -2,6 +2,8 @@
     <!-- The app talks to the DeenVoice backend and streams songs from it. Flutter only adds
          this permission to debug/profile builds, so a release build needs it declared here. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Recording a voice sample inside the app. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
         android:label="DeenVoice"
         android:name="${applicationName}"

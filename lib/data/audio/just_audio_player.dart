@@ -1,5 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:just_audio/just_audio.dart';
 
 import '../../domain/playback/audio_player_port.dart';
@@ -74,6 +78,47 @@ class JustAudioPlayer implements AudioPlayerPort {
     }
   }
 
+  File? _tempFile;
+
+  /// Web plays a data URL; mobile and desktop write a temporary file (some
+  /// platform players cannot open data URLs), removed again in [dispose].
+  @override
+  Future<void> loadBytes(Uint8List bytes, {required String mimeType}) async {
+    _emit(const PlaybackState(buffering: true));
+    try {
+      final Duration? duration;
+      if (kIsWeb) {
+        duration = await _player.setUrl(
+          'data:$mimeType;base64,${base64Encode(bytes)}',
+        );
+      } else {
+        final file = File(
+          '${Directory.systemTemp.path}/deenvoice_preview_'
+          '${DateTime.now().microsecondsSinceEpoch}.wav',
+        );
+        await file.writeAsBytes(bytes, flush: true);
+        _tempFile = file;
+        duration = await _player.setFilePath(file.path);
+      }
+      _emit(
+        _state.copyWith(
+          loaded: true,
+          buffering: false,
+          duration: duration,
+          clearError: true,
+        ),
+      );
+    } on PlayerException {
+      _emit(
+        _state.copyWith(
+          buffering: false,
+          error: 'This recording couldn’t be played back.',
+        ),
+      );
+      rethrow;
+    }
+  }
+
   @override
   Future<void> play() async {
     // just_audio's play() completes when playback ends, so it is not awaited.
@@ -92,6 +137,9 @@ class JustAudioPlayer implements AudioPlayerPort {
       await s.cancel();
     }
     await _player.dispose();
+    try {
+      await _tempFile?.delete();
+    } catch (_) {}
     await _controller.close();
   }
 }

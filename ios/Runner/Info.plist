@@ -6,6 +6,8 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>DeenVoice uses the microphone only when you choose to record your voice, so it can create a voice profile you control. You can delete it at any time.</string>
 	<key>CFBundleDisplayName</key>
 	<string>DeenVoice</string>
 	<key>CFBundleExecutable</key>

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -8,6 +10,7 @@ import '../../../domain/failures.dart';
 import '../../../domain/services.dart';
 import '../../../domain/voice/consent.dart';
 import '../../shared/dialogs.dart';
+import '../../voices/record_voice_screen.dart';
 
 /// Voice enrollment entry point: captures explicit consent, then uploads an
 /// authorized recording. In-app recording needs microphone support that is not
@@ -50,22 +53,39 @@ class _AddVoiceSheetState extends ConsumerState<_AddVoiceSheet> {
       (!_needsOwnerName || _authorizedBy.text.trim().isNotEmpty) &&
       !_busy;
 
-  Future<void> _upload() async {
+  /// Picks a file, or records one in the app, then enrolls it.
+  Future<void> _upload() => _enroll(() async {
+    final picked = await ref.read(audioFilePickerProvider).pickAudio();
+    return picked == null
+        ? null
+        : (fileName: picked.fileName, bytes: picked.bytes);
+  });
+
+  Future<void> _record() => _enroll(() async {
+    final voice = await RecordVoiceScreen.open(context);
+    return voice == null ? null : (fileName: voice.fileName, bytes: voice.wav);
+  });
+
+  /// [source] returns the audio to enroll, or null if the user backed out.
+  /// Consent has already been given on this sheet either way.
+  Future<void> _enroll(
+    Future<({String fileName, Uint8List bytes})?> Function() source,
+  ) async {
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
       final statements = ref.read(consentStatementsProvider).value;
-      final picked = await ref.read(audioFilePickerProvider).pickAudio();
-      if (picked == null || !mounted) return;
+      final audio = await source();
+      if (audio == null || !mounted) return;
       await ref
           .read(voiceRepositoryProvider)
           .enrollVoice(
             VoiceEnrollment(
               displayName: _name.text.trim(),
-              fileName: picked.fileName,
-              audio: picked.bytes,
+              fileName: audio.fileName,
+              audio: audio.bytes,
               consent: VoiceConsent(
                 ownership: _ownership,
                 acceptedAt: DateTime.now().toUtc(),
@@ -206,14 +226,17 @@ class _AddVoiceSheetState extends ConsumerState<_AddVoiceSheet> {
               ),
               const SizedBox(height: 8),
               OutlinedButton.icon(
-                onPressed: null,
+                onPressed:
+                    _canSubmit && !statementsFailed && !statements.isLoading
+                    ? _record
+                    : null,
                 icon: const Icon(LucideIcons.mic, size: 16),
                 label: const Text('Record now'),
               ),
               const SizedBox(height: 6),
               Text(
-                'Recording inside the app isn’t available yet. Upload a clear, '
-                'quiet recording for now.',
+                'Record in the app, or upload a clear, quiet recording. You '
+                'can listen to a recording before it is used.',
                 style: DeenText.sectionHint,
               ),
             ],

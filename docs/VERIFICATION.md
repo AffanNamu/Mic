@@ -70,7 +70,8 @@ reason. Screenshots: `docs/verification/flows/`.
 | Song type cards | Select; Nasheed Style applies template; Instrumental removes voice/lyrics requirement; unsupported types disabled with the engine named. |
 | Voice cards | Select real profiles; not-ready and speech-only voices explain why they can't be chosen; row scrolls with many voices. |
 | Manage Voices | Lists voices; delete needs confirmation and calls the repository; system voices not deletable; empty state. |
-| Add New Voice | Needs consent and a name; records ownership + UTC time; validates file; shows service errors; "Record now" shown unavailable. |
+| Add New Voice | Needs consent and a name; records ownership + UTC time; validates file; shows service errors; "Record now" opens the in-app recorder. |
+| Record your voice | Idle → recording (time, level, minimum-length hint) → review (listen back) → use or record again. Too-short and silent takes are refused with the reason; a refused microphone is explained and can be retried; leaving mid-recording discards the audio; every control is its own labelled semantics node (checked in the semantics tree after a real browser showed them merged). |
 | Lyrics | Input, counter, 3000 cap, RTL for Arabic, mixed text preserved. |
 | Import Text | Replaces after confirmation; truncation notice; empty/invalid file messages; cancel is a no-op. |
 | Write with AI / AI Improve | Reviewable suggestion, nothing applied until accepted; "not connected" shown when unconfigured; user's text untouched on failure. |
@@ -187,7 +188,7 @@ labelled test double** (a synthetic tone); none of it is evidence about a real A
 | `flutter analyze` | No issues found |
 | `flutter test --coverage` | 220 passed, 0 failed; `lib/` line coverage 91.5% |
 | `flutter build web --release --no-web-resources-cdn --dart-define=API_BASE_URL=http://127.0.0.1:18080 -o build/web_e2e` | Built |
-| `node tool/web_e2e_backend.mjs build/web_e2e docs/verification/backend_e2e` | **14/14** checks, no page errors (test-double provider) |
+| `node tool/web_e2e_backend.mjs build/web_e2e docs/verification/backend_e2e` | **15/15** checks, no page errors (test-double provider); includes recording from a Chromium fake microphone and enrolling it |
 
 ## Mutation checks
 

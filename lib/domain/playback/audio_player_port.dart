@@ -75,6 +75,9 @@ abstract interface class AudioPlayerPort {
   /// cannot be opened.
   Future<void> load(Uri url);
 
+  /// Opens audio held in memory (for example a fresh recording to review).
+  Future<void> loadBytes(Uint8List bytes, {required String mimeType});
+
   Future<void> play();
 
   Future<void> pause();

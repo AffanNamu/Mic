@@ -17,6 +17,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../support/fakes.dart';
+import '../support/fakes_backend.dart';
 import '../support/harness.dart';
 
 void main() {
@@ -225,6 +226,32 @@ void main() {
       expect(find.text('Sister Aisha was deleted.'), findsOneWidget);
     });
 
+    testWidgets(
+      'going back after deleting refreshes the Create Song screen without '
+      'a framework error',
+      (tester) async {
+        final repo = FakeVoiceRepository(const [
+          readyOwnVoice,
+          readyAuthorizedVoice,
+        ]);
+        await pumpApp(tester, env(voiceRepo: repo));
+        expect(find.text('Sister Aisha'), findsWidgets);
+
+        await tapVisible(tester, find.text('Manage Voices'));
+        await tester.tap(find.byTooltip('Delete Sister Aisha'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Delete'));
+        await tester.pumpAndSettle();
+
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('Manage Voices'), findsOneWidget);
+        expect(find.text('Sister Aisha'), findsNothing);
+      },
+    );
+
     testWidgets('cancelling the confirmation deletes nothing', (tester) async {
       final repo = FakeVoiceRepository(const [readyOwnVoice]);
       await pumpApp(tester, env(voiceRepo: repo));
@@ -371,23 +398,99 @@ void main() {
       expect(find.text('That recording is larger than 25 MB.'), findsOneWidget);
     });
 
-    testWidgets('in-app recording is offered as unavailable, not faked', (
-      tester,
-    ) async {
-      await pumpApp(tester, env());
-      await tapVisible(tester, find.text('Add New Voice'));
+    group('in-app recording', () {
+      Future<FakeVoiceRecorder> openRecorder(
+        WidgetTester tester,
+        FakeVoiceRepository repo,
+      ) async {
+        final mic = FakeVoiceRecorder();
+        await pumpApp(
+          tester,
+          TestEnv(
+            voices: repo,
+            credits: FakeCreditsRepository(10),
+            recorder: mic,
+          ),
+        );
+        await tapVisible(tester, find.text('Add New Voice'));
+        return mic;
+      }
 
-      expect(
-        tester
-            .widget<OutlinedButton>(
-              find.widgetWithText(OutlinedButton, 'Record now'),
-            )
-            .onPressed,
-        isNull,
-      );
-      expect(
-        find.textContaining('Recording inside the app isn’t available'),
-        findsOneWidget,
+      OutlinedButton recordButton(WidgetTester tester) =>
+          tester.widget<OutlinedButton>(
+            find.widgetWithText(OutlinedButton, 'Record now'),
+          );
+
+      Future<void> recordAndUse(
+        WidgetTester tester,
+        FakeVoiceRecorder mic,
+      ) async {
+        await tester.tap(find.text('Record now'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Start recording'));
+        await tester.pump(const Duration(milliseconds: 100));
+        mic.emit(const Duration(seconds: 8));
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.tap(find.text('Stop recording'));
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.tap(find.text('Use this recording'));
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pump(const Duration(milliseconds: 400));
+      }
+
+      testWidgets('Record now waits for consent and a name, like upload', (
+        tester,
+      ) async {
+        await openRecorder(tester, FakeVoiceRepository(const []));
+        expect(recordButton(tester).onPressed, isNull);
+        await tester.tap(find.byType(CheckboxListTile));
+        await tester.pumpAndSettle();
+        expect(recordButton(tester).onPressed, isNotNull);
+        await tester.enterText(find.widgetWithText(TextField, 'My Voice'), ' ');
+        await tester.pumpAndSettle();
+        expect(recordButton(tester).onPressed, isNull);
+      });
+
+      testWidgets('a recording is enrolled as a WAV with the same consent', (
+        tester,
+      ) async {
+        final repo = FakeVoiceRepository(const []);
+        final mic = await openRecorder(tester, repo);
+        await tester.tap(find.byType(CheckboxListTile));
+        await tester.pumpAndSettle();
+
+        await recordAndUse(tester, mic);
+
+        expect(repo.enrollments, hasLength(1));
+        final e = repo.enrollments.single;
+        expect(e.fileName, 'recording.wav');
+        expect(e.audio, mic.result.wav);
+        expect(String.fromCharCodes(e.audio.sublist(0, 4)), 'RIFF');
+        expect(e.consent.ownership, VoiceOwnership.ownVoice);
+        expect(e.consent.acceptedAt.isUtc, isTrue);
+        expect(find.textContaining('Voice submitted'), findsOneWidget);
+      });
+
+      testWidgets(
+        'backing out of the recorder enrolls nothing and keeps the sheet',
+        (tester) async {
+          final repo = FakeVoiceRepository(const []);
+          final mic = await openRecorder(tester, repo);
+          await tester.tap(find.byType(CheckboxListTile));
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text('Record now'));
+          await tester.pumpAndSettle();
+          await tester.pageBack();
+          await tester.pumpAndSettle();
+
+          expect(repo.enrollments, isEmpty);
+          expect(mic.cancels, greaterThanOrEqualTo(0));
+          expect(find.text('Add New Voice'), findsWidgets);
+          expect(find.byType(CheckboxListTile), findsOneWidget);
+          expect(find.textContaining('Something went wrong'), findsNothing);
+        },
       );
     });
   });
