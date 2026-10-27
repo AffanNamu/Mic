@@ -200,7 +200,8 @@ class _HeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 186,
+      // 186 as designed, taller if large text needs it.
+      constraints: const BoxConstraints(minHeight: 186),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
@@ -237,6 +238,7 @@ class _HeroCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 18, 14, 14),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ExcludeSemantics(
@@ -279,17 +281,24 @@ class _HeroCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const Spacer(),
-                  Row(
-                    children: [
-                      _GoldPill(
-                        label: 'Create a Song',
-                        trailing: LucideIcons.arrowRight,
-                        onTap: onCreate,
-                      ),
-                      const Spacer(),
-                      _HowItWorks(),
-                    ],
+                  const SizedBox(height: 7),
+                  // Side by side, or one under the other on a narrow screen.
+                  SizedBox(
+                    width: double.infinity,
+                    child: Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        _GoldPill(
+                          label: 'Create a Song',
+                          trailing: LucideIcons.arrowRight,
+                          onTap: onCreate,
+                        ),
+                        _HowItWorks(),
+                      ],
+                    ),
                   ),
                 ],
               ),

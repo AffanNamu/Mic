@@ -16,8 +16,14 @@ class FakeVoiceRepository implements VoiceRepository {
   final List<VoiceProfile> voices;
   final enrollments = <VoiceEnrollment>[];
 
+  /// Thrown from [listVoices] when set.
+  AppFailure? listFailure;
+
   @override
-  Future<List<VoiceProfile>> listVoices() async => [...voices];
+  Future<List<VoiceProfile>> listVoices() async {
+    if (listFailure != null) throw listFailure!;
+    return [...voices];
+  }
 
   @override
   Future<VoiceProfile> enrollVoice(VoiceEnrollment enrollment) async {

@@ -4,6 +4,7 @@ import 'package:deenvoice/data/api/session_store.dart';
 import 'package:deenvoice/data/local/memory_stores.dart';
 import 'package:deenvoice/domain/auth/auth.dart';
 import 'package:deenvoice/domain/library/library.dart';
+import 'package:deenvoice/domain/links.dart';
 import 'package:deenvoice/domain/local/local_stores.dart';
 import 'package:deenvoice/domain/voice/voice_profile.dart';
 import 'package:flutter/material.dart';
@@ -24,12 +25,19 @@ Future<void> pumpScreens(
   WidgetTester tester, {
   required bool signedIn,
   bool onboarded = true,
+  OnboardingStore? onboardingStore,
+  ActivityStore? activityStore,
+  LegalLinks? links,
+  LinkOpener? opener,
   List<VoiceProfile> voices = const [readyOwnVoice],
   FakeVoiceRepository? voiceRepo,
   FakeGenerationService? generation,
+  FakeAuthService? auth,
   DraftStore? drafts,
   List<SongRecord> songs = const [],
+  SongLibrary? library,
   List<GenerationJob> jobs = const [],
+  FakeGenerationJobs? jobsFake,
   Size size = referenceLogicalSize,
 }) async {
   tester.view.physicalSize = size * referencePixelRatio;
@@ -45,8 +53,12 @@ Future<void> pumpScreens(
       overrides: [
         ...localStoreOverrides(
           drafts: drafts,
-          onboarding: MemoryOnboardingStore(completed: onboarded),
+          onboarding:
+              onboardingStore ?? MemoryOnboardingStore(completed: onboarded),
+          activity: activityStore,
         ),
+        if (links != null) legalLinksProvider.overrideWithValue(links),
+        if (opener != null) linkOpenerProvider.overrideWithValue(opener),
         apiBaseUrlProvider.overrideWithValue('https://api.example.test'),
         clockProvider.overrideWithValue(() => screenNow),
         sessionStoreProvider.overrideWithValue(
@@ -61,11 +73,15 @@ Future<void> pumpScreens(
                 : null,
           ),
         ),
-        songLibraryProvider.overrideWithValue(FakeSongLibrary(songs)),
+        songLibraryProvider.overrideWithValue(
+          library ?? FakeSongLibrary(songs),
+        ),
         generationJobsProvider.overrideWithValue(
-          FakeGenerationJobs()..recentJobs = jobs,
+          jobsFake ?? (FakeGenerationJobs()..recentJobs = jobs),
         ),
         creditsRepositoryProvider.overrideWithValue(FakeCreditsRepository(120)),
+        authServiceProvider.overrideWithValue(auth ?? FakeAuthService()),
+        consentSourceProvider.overrideWithValue(FakeConsentSource()),
         songGenerationServiceProvider.overrideWithValue(
           generation ?? FakeGenerationService(),
         ),

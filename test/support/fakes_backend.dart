@@ -7,6 +7,7 @@ import 'dart:typed_data';
 import 'package:deenvoice/domain/auth/auth.dart';
 import 'package:deenvoice/domain/failures.dart';
 import 'package:deenvoice/domain/library/library.dart';
+import 'package:deenvoice/domain/links.dart';
 import 'package:deenvoice/domain/playback/audio_player_port.dart';
 import 'package:deenvoice/domain/recording/voice_recorder.dart';
 import 'package:deenvoice/domain/services.dart';
@@ -80,6 +81,9 @@ class FakeGenerationJobs implements GenerationJobs {
   int step = 0;
   List<GenerationJob> recentJobs = [];
   Object? error;
+
+  /// Thrown from [recent] when set.
+  Object? recentError;
   final cancelled = <String>[];
   var polls = 0;
 
@@ -91,7 +95,10 @@ class FakeGenerationJobs implements GenerationJobs {
   }
 
   @override
-  Future<List<GenerationJob>> recent() async => [...recentJobs];
+  Future<List<GenerationJob>> recent() async {
+    if (recentError != null) throw recentError!;
+    return [...recentJobs];
+  }
 
   @override
   Future<GenerationJob> cancel(String jobId) async {
@@ -300,3 +307,29 @@ RecordedVoice fakeRecording({
   peakLevel: peak,
   averageLevel: average,
 );
+
+class FakeLinkOpener implements LinkOpener {
+  FakeLinkOpener({this.result = true});
+
+  bool result;
+  final opened = <Uri>[];
+
+  @override
+  Future<bool> open(Uri url) async {
+    opened.add(url);
+    return result;
+  }
+}
+
+/// A library whose list fails until [failure] is cleared.
+class FakeSongLibraryThatFails extends FakeSongLibrary {
+  FakeSongLibraryThatFails() : super(const []);
+
+  AppFailure? failure = const ServiceFailure('The server is down.');
+
+  @override
+  Future<List<SongRecord>> list() async {
+    if (failure != null) throw failure!;
+    return super.list();
+  }
+}

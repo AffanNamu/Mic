@@ -185,6 +185,7 @@ Future<void> pumpProductionApp(
   AudioFilePicker? audioPicker,
   Size size = referenceLogicalSize,
   bool openCreate = true,
+  OnboardingStore? onboarding,
 }) async {
   tester.view.physicalSize = size * referencePixelRatio;
   tester.view.devicePixelRatio = referencePixelRatio;
@@ -194,7 +195,7 @@ Future<void> pumpProductionApp(
     ProviderScope(
       retry: (_, _) => null,
       overrides: [
-        ...localStoreOverrides(),
+        ...localStoreOverrides(onboarding: onboarding),
         if (textPicker != null)
           textFilePickerProvider.overrideWithValue(textPicker),
         if (audioPicker != null)
