@@ -58,6 +58,7 @@ class Rig {
   int credits = 5;
 
   List<Override> get overrides => [
+    ...localStoreOverrides(),
     apiBaseUrlProvider.overrideWithValue('https://api.example.test'),
     sessionStoreProvider.overrideWithValue(store),
     authServiceProvider.overrideWithValue(auth),
@@ -110,6 +111,29 @@ Future<void> settle(WidgetTester tester, [int frames = 12]) async {
   }
 }
 
+/// The welcome screen's "Continue with Email" opens the form.
+Future<void> openEmailForm(WidgetTester tester) async {
+  await tester.tap(find.text('Continue with Email'));
+  await settle(tester);
+}
+
+/// Home's "Create a Song" opens Create Song full screen.
+Future<void> openCreate(WidgetTester tester) async {
+  await tester.tap(find.text('Create a Song'));
+  await settle(tester);
+}
+
+/// The bottom bar's Library tab (the last "Library" text on screen).
+Future<void> openLibraryTab(WidgetTester tester) async {
+  await tester.tap(find.text('Library').last);
+  await settle(tester);
+}
+
+Future<void> pumpLibrary(WidgetTester tester, Rig rig) async {
+  await pump(tester, rig);
+  await openLibraryTab(tester);
+}
+
 Future<void> leave(WidgetTester tester) async {
   // Dispose the tree so periodic timers end before the test does.
   await tester.pumpWidget(const SizedBox());
@@ -122,7 +146,7 @@ void main() {
   group('sign-in gate', () {
     testWidgets('signed out: sign-in is shown, not the app', (tester) async {
       await pump(tester, Rig(signedIn: false));
-      expect(find.text('Welcome back'), findsOneWidget);
+      expect(find.text('Welcome Back'), findsOneWidget);
       expect(find.text('Generate Song'), findsNothing);
       await leave(tester);
     });
@@ -131,8 +155,8 @@ void main() {
       tester,
     ) async {
       await pump(tester, Rig());
-      expect(find.text('My Songs'), findsOneWidget);
-      expect(find.text('Welcome back'), findsNothing);
+      expect(find.text('Create a Song'), findsOneWidget);
+      expect(find.text('Welcome Back'), findsNothing);
       await leave(tester);
     });
 
@@ -141,6 +165,7 @@ void main() {
     ) async {
       final rig = Rig(signedIn: false);
       await pump(tester, rig);
+      await openEmailForm(tester);
       await tester.tap(find.text('Sign in').last);
       await settle(tester);
       expect(find.text('Enter a valid email address.'), findsOneWidget);
@@ -155,9 +180,10 @@ void main() {
       await leave(tester);
     });
 
-    testWidgets('signing in opens the library for that user', (tester) async {
+    testWidgets('signing in opens the app for that user', (tester) async {
       final rig = Rig(signedIn: false);
       await pump(tester, rig);
+      await openEmailForm(tester);
       await tester.enterText(
         find.widgetWithText(TextField, 'Email'),
         'amina@example.com',
@@ -169,7 +195,8 @@ void main() {
       await tester.tap(find.text('Sign in').last);
       await settle(tester);
       expect(rig.auth.calls, ['signIn:amina@example.com']);
-      expect(find.text('My Songs'), findsOneWidget);
+      expect(find.text('Create a Song'), findsOneWidget);
+      expect(find.text('Welcome Back'), findsNothing);
       expect((await rig.store.read())?.email, 'amina@example.com');
       await leave(tester);
     });
@@ -181,6 +208,7 @@ void main() {
         signedIn: false,
       )..auth.failure = const ServiceFailure('Email or password is incorrect.');
       await pump(tester, rig);
+      await openEmailForm(tester);
       await tester.enterText(
         find.widgetWithText(TextField, 'Email'),
         'amina@example.com',
@@ -192,7 +220,7 @@ void main() {
       await tester.tap(find.text('Sign in').last);
       await settle(tester);
       expect(find.text('Email or password is incorrect.'), findsOneWidget);
-      expect(find.text('Welcome back'), findsOneWidget);
+      expect(find.text('Sign in with email'), findsOneWidget);
       await leave(tester);
     });
 
@@ -201,6 +229,7 @@ void main() {
     ) async {
       final rig = Rig(signedIn: false);
       await pump(tester, rig);
+      await openEmailForm(tester);
       await tester.tap(find.text('Create a new account'));
       await settle(tester);
       await tester.enterText(
@@ -233,11 +262,14 @@ void main() {
     ) async {
       final rig = Rig();
       await pump(tester, rig);
-      await tester.tap(find.byTooltip('Menu'));
+      await tester.tap(find.text('A')); // the avatar: the email's initial
       await settle(tester);
       await tester.tap(find.text('Sign out'));
       await settle(tester);
-      expect(find.text('Welcome back'), findsOneWidget);
+      expect(find.text('Sign out?'), findsOneWidget);
+      await tester.tap(find.text('Sign out').last);
+      await settle(tester);
+      expect(find.text('Welcome Back'), findsOneWidget);
       expect(rig.auth.signOuts, 1);
       expect(await rig.store.read(), isNull);
       await leave(tester);
@@ -248,7 +280,7 @@ void main() {
     testWidgets('empty library says so and offers to create a song', (
       tester,
     ) async {
-      await pump(tester, Rig());
+      await pumpLibrary(tester, Rig());
       expect(find.textContaining('No songs yet'), findsOneWidget);
       expect(find.text('Create a song'), findsOneWidget);
       await leave(tester);
@@ -257,7 +289,7 @@ void main() {
     testWidgets('lists saved songs with their voice, language and length', (
       tester,
     ) async {
-      await pump(
+      await pumpLibrary(
         tester,
         Rig(
           songs: [
@@ -267,7 +299,7 @@ void main() {
         ),
       );
       expect(find.text('Ya Rabbi'), findsOneWidget);
-      expect(find.textContaining('My Voice · english · 3:05'), findsOneWidget);
+      expect(find.textContaining('My Voice · English · 3:05'), findsOneWidget);
       expect(find.text('Second'), findsOneWidget);
       await leave(tester);
     });
@@ -296,7 +328,7 @@ void main() {
             songId: 'song-1',
           ),
         ];
-        await pump(tester, rig);
+        await pumpLibrary(tester, rig);
         expect(find.text('In progress'), findsOneWidget);
         expect(find.text('Generating your song'), findsOneWidget);
         expect(find.text('Couldn’t be made'), findsOneWidget);
@@ -325,7 +357,7 @@ void main() {
             stage: 'Generating your song',
           ),
         ];
-        await pump(tester, rig);
+        await pumpLibrary(tester, rig);
         expect(find.text('Generating your song'), findsOneWidget);
 
         rig.library.songs.add(song(id: 'new', title: 'Fresh'));
@@ -341,16 +373,15 @@ void main() {
       },
     );
 
-    testWidgets('New song opens Create Song and Back returns to the library', (
+    testWidgets('Create a Song opens Create Song and Back returns to Home', (
       tester,
     ) async {
       await pump(tester, Rig());
-      await tester.tap(find.text('New song'));
-      await settle(tester);
+      await openCreate(tester);
       expect(find.text('Generate Song'), findsWidgets);
       await tester.tap(find.bySemanticsLabel('Back'));
       await settle(tester);
-      expect(find.text('My Songs'), findsOneWidget);
+      expect(find.text('Create a Song'), findsOneWidget);
       await leave(tester);
     });
   });
@@ -360,7 +391,7 @@ void main() {
       'opens a saved song: signed link requested, lyrics and maker shown, play/pause drive the player',
       (tester) async {
         final rig = Rig(songs: [song(provider: 'mureka')]);
-        await pump(tester, rig);
+        await pumpLibrary(tester, rig);
         await tester.tap(find.text('Ya Rabbi').first);
         await settle(tester);
 
@@ -387,7 +418,7 @@ void main() {
     testWidgets(
       'shows the maker truthfully even when it is not a real provider',
       (tester) async {
-        await pump(tester, Rig(songs: [song(provider: 'test-double')]));
+        await pumpLibrary(tester, Rig(songs: [song(provider: 'test-double')]));
         await tester.tap(find.text('Ya Rabbi').first);
         await settle(tester);
         expect(find.textContaining('Made with test-double'), findsOneWidget);
@@ -402,7 +433,7 @@ void main() {
         ..library.audioFailure = const ServiceFailure(
           'This link is invalid or has expired.',
         );
-      await pump(tester, rig);
+      await pumpLibrary(tester, rig);
       await tester.tap(find.text('Ya Rabbi').first);
       await settle(tester);
       expect(find.text('This link is invalid or has expired.'), findsOneWidget);
@@ -419,7 +450,7 @@ void main() {
       tester,
     ) async {
       final rig = Rig(songs: [song()]);
-      await pump(tester, rig);
+      await pumpLibrary(tester, rig);
       await tester.tap(find.text('Ya Rabbi').first);
       await settle(tester);
 
@@ -442,7 +473,7 @@ void main() {
       await tester.tap(find.text('Delete').last);
       await settle(tester);
       expect(rig.library.songs, isEmpty);
-      expect(find.text('My Songs'), findsOneWidget);
+      expect(find.textContaining('No songs yet'), findsOneWidget);
       await leave(tester);
     });
 
@@ -452,7 +483,7 @@ void main() {
         // Regression: a SelectableText here rendered the lyrics but exposed no text
         // to the accessibility tree (found by inspecting Chromium's DOM).
         final handle = tester.ensureSemantics();
-        await pump(tester, Rig(songs: [song(provider: 'mureka')]));
+        await pumpLibrary(tester, Rig(songs: [song(provider: 'mureka')]));
         await tester.tap(find.text('Ya Rabbi').first);
         await settle(tester);
         expect(
@@ -470,7 +501,7 @@ void main() {
     );
 
     testWidgets('Arabic lyrics are laid out right-to-left', (tester) async {
-      await pump(tester, Rig(songs: [song(lyrics: 'يا رب اغفر لنا')]));
+      await pumpLibrary(tester, Rig(songs: [song(lyrics: 'يا رب اغفر لنا')]));
       await tester.tap(find.text('Ya Rabbi').first);
       await settle(tester);
       // The lyrics are a normal Text (exposed to screen readers) inside a
@@ -485,8 +516,7 @@ void main() {
 
   group('generation progress (real job states)', () {
     Future<void> generate(WidgetTester tester) async {
-      await tester.tap(find.text('New song'));
-      await settle(tester);
+      await openCreate(tester);
       await tester.enterText(
         find.byKey(const ValueKey('title-field')),
         'Ya Rabbi',
@@ -593,8 +623,7 @@ void main() {
       (tester) async {
         final rig = Rig(voices: const []);
         await pump(tester, rig);
-        await tester.tap(find.text('New song'));
-        await settle(tester);
+        await openCreate(tester);
         await tester.ensureVisible(find.text('Add New Voice'));
         await settle(tester);
         await tester.tap(find.text('Add New Voice'));
@@ -629,8 +658,7 @@ void main() {
         statementsFailure: const ServiceFailure('down'),
       );
       await pump(tester, rig);
-      await tester.tap(find.text('New song'));
-      await settle(tester);
+      await openCreate(tester);
       await tester.ensureVisible(find.text('Add New Voice'));
       await settle(tester);
       await tester.tap(find.text('Add New Voice'));
@@ -663,8 +691,7 @@ void main() {
         );
         final rig = Rig(voices: const [enrolling]);
         await pump(tester, rig);
-        await tester.tap(find.text('New song'));
-        await settle(tester);
+        await openCreate(tester);
         expect(find.text('Processing…'), findsOneWidget);
 
         rig.voiceRepo.voices
@@ -693,9 +720,7 @@ void main() {
       rig.voiceRepo.deleteDisclosure =
           'The music provider could not delete its copy automatically.';
       await pump(tester, rig);
-      await tester.tap(find.byTooltip('Menu'));
-      await settle(tester);
-      await tester.tap(find.text('Manage voices'));
+      await tester.tap(find.text('My Voice').last); // the bottom bar
       await settle(tester);
       await tester.tap(find.byTooltip('Delete My Voice'));
       await settle(tester);
@@ -717,7 +742,7 @@ void main() {
       );
       await container.read(sessionProvider.notifier).expire();
       await settle(tester);
-      expect(find.text('Welcome back'), findsOneWidget);
+      expect(find.text('Welcome Back'), findsOneWidget);
       await leave(tester);
     });
   });

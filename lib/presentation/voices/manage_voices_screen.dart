@@ -16,7 +16,6 @@ class ManageVoicesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final voices = ref.watch(voicesProvider);
     return Scaffold(
       appBar: AppBar(
         backgroundColor: DeenColors.background,
@@ -29,31 +28,46 @@ class ManageVoicesScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: voices.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => _Message(
-          text: error is AppFailure
-              ? error.message
-              : 'Your voices couldn’t be loaded.',
-          actionLabel: 'Retry',
-          onAction: () => ref.invalidate(voicesProvider),
-        ),
-        data: (list) => list.isEmpty
-            ? _Message(
-                text:
-                    'You have no saved voices yet. Add a recording of your '
-                    'own voice, or of someone who has given you permission, '
-                    'to sing your lyrics.',
-                actionLabel: 'Add New Voice',
-                onAction: () => showAddVoiceSheet(context),
-              )
-            : ListView.separated(
-                padding: const EdgeInsets.all(16),
-                itemCount: list.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 10),
-                itemBuilder: (context, index) => _VoiceTile(voice: list[index]),
-              ),
+      body: const VoiceList(),
+    );
+  }
+}
+
+/// The user's voices (or why there are none), with delete on each. Shared by
+/// Manage Voices and the My Voice tab.
+class VoiceList extends ConsumerWidget {
+  const VoiceList({super.key, this.bottomPadding = 16});
+
+  /// Space under the last voice, so a tab can clear the bottom bar.
+  final double bottomPadding;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final voices = ref.watch(voicesProvider);
+    return voices.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => _Message(
+        text: error is AppFailure
+            ? error.message
+            : 'Your voices couldn’t be loaded.',
+        actionLabel: 'Retry',
+        onAction: () => ref.invalidate(voicesProvider),
       ),
+      data: (list) => list.isEmpty
+          ? _Message(
+              text:
+                  'You have no saved voices yet. Add a recording of your '
+                  'own voice, or of someone who has given you permission, '
+                  'to sing your lyrics.',
+              actionLabel: 'Add New Voice',
+              onAction: () => showAddVoiceSheet(context),
+            )
+          : ListView.separated(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding),
+              itemCount: list.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
+              itemBuilder: (context, index) => _VoiceTile(voice: list[index]),
+            ),
     );
   }
 }

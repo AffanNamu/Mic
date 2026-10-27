@@ -7,10 +7,10 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../application/providers.dart';
 import '../../application/recording_controller.dart';
+import '../../core/format.dart';
 import '../../core/theme/deen_theme.dart';
 import '../../domain/playback/audio_player_port.dart';
 import '../../domain/recording/voice_recorder.dart';
-import '../library/song_player_screen.dart' show formatDuration;
 import '../shared/routes.dart';
 
 /// Records a voice sample with the microphone, lets the user listen to it, and

@@ -108,6 +108,13 @@ abstract final class DeenText {
   static final bodyStrong      = _sans(11,    FontWeight.w600, DeenColors.textPrimary,   height: 1.4);
   static final sheetTitle      = _serif(16,   FontWeight.w600, DeenColors.textPrimary,   height: 1.2);
   static final error           = _sans(9,     FontWeight.w400, DeenColors.danger,        height: 1.35);
+  // Welcome / onboarding / Home. Sizes measured against login.png and home.png.
+  static final taglineLarge    = _sans(11.4,  FontWeight.w400, DeenColors.textSecondary, height: 1.2, letterSpacing: 2.05);
+  static final authTitle       = _serif(29.2,   FontWeight.w500, DeenColors.textPrimary,   height: 1.15);
+  static final authSubtitle    = _sans(11.4,  FontWeight.w400, DeenColors.textSecondary, height: 1.45);
+  static final authButton      = _sans(13.6,  FontWeight.w600, DeenColors.textPrimary,   height: 1.2);
+  static final authNote        = _sans(10.8,  FontWeight.w400, DeenColors.textSecondary, height: 1.45);
+  static final onboardTitle    = _serif(26,   FontWeight.w600, DeenColors.textPrimary,   height: 1.2);
   // dart format on
 }
 

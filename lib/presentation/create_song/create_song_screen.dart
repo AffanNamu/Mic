@@ -21,9 +21,14 @@ import 'widgets/song_details_form.dart';
 import 'widgets/song_type_selector.dart';
 import 'widgets/voice_selector.dart';
 
+/// Where Create Song should open scrolled to, when not at the top.
+enum CreateSection { lyrics, voice }
+
 /// Step 1–4 of making a song: type, voice, lyrics, details, then Generate.
 class CreateSongScreen extends ConsumerStatefulWidget {
-  const CreateSongScreen({super.key});
+  const CreateSongScreen({super.key, this.initialSection});
+
+  final CreateSection? initialSection;
 
   @override
   ConsumerState<CreateSongScreen> createState() => _CreateSongScreenState();
@@ -38,6 +43,19 @@ class _CreateSongScreenState extends ConsumerState<CreateSongScreen> {
 
   /// Inline errors only appear once the user has tried to generate.
   bool _attempted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final section = widget.initialSection;
+    if (section != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _scrollTo(section == CreateSection.lyrics ? _lyricsKey : _voiceKey);
+        }
+      });
+    }
+  }
 
   void _scrollTo(GlobalKey key) {
     final target = key.currentContext;

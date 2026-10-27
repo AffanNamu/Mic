@@ -17,6 +17,21 @@ The illuminated masjid scene in the Create Song header.
   composition) for crisp results; no code change is needed except updating
   `_MasjidArtwork` dimensions if the aspect ratio changes.
 
+## Welcome and Home art (bundled), made by `tool/extract_art.py`
+
+All of these are cut from the supplied design references with the script above, which
+can be re-run. They are screenshot-resolution rasters, not the original artwork, so
+they are soft on 3x displays. Where a reference element is drawn live by the app, the
+pixels under it were filled in by diffusion (no repainting or generation):
+
+| File | Source | Size | Edits |
+| --- | --- | --- | --- |
+| `art/login_hero.webp` | `login.png` rows 0–700 | 852 × 700 | Status bar, the language pill and the app icon (all drawn live) filled in. The gold arch and the mosque are untouched. |
+| `art/home_hero.webp` | `home.png`, hero card, columns 430–822 | 392 × 365 | The "Watch Demo" button filled in (the app has no demo video; it draws its own "How it works" control). The fade from the card into the art is done in code. |
+| `art/template_hausa.webp`, `template_arabic`, `template_english`, `template_mixed` | `home.png`, Quick Start images | 180 × 117 each | The "Popular" badge on the first filled in (popularity is not something the app knows). |
+| `art/cover_1.webp` … `cover_3.webp` | `home.png`, the three Recent Songs cards | ~257 × 190 | The play button, title and menu dots over each picture's darkened lower part filled in (drawn live). **Generic cover art:** the three pictures are cycled over the user's songs by a hash of the song id. A song has no cover of its own, and the app does not claim otherwise. |
+| `brand/deenvoice_icon_384.webp` | `brand/deenvoice_icon.png`, cropped to the gold border | 384 × 384 | Scaled down, and the square backdrop's corners made transparent so the rounded icon sits on any background. Used for the Welcome and Home headers. |
+
 ## `brand/deenvoice_icon.png` (source only, not bundled)
 
 The app icon, cropped from `design/reference/app_icon.png` and scaled to

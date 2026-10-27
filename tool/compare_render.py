@@ -3,6 +3,9 @@
 
 Usage: python3 tool/compare_render.py [render.png] [reference.png]
 
+The reference's file name (create_song, login or home) selects the element windows
+and bands to compare.
+
 Prints, per named element, where it sits in the reference and in the render
 (bounding box of "ink" inside a search window), plus the offsets and width ratio.
 Also writes side-by-side and diff images to build/renders/compare/ and reports
@@ -19,10 +22,10 @@ from PIL import Image
 
 RENDER = sys.argv[1] if len(sys.argv) > 1 else 'build/renders/create_song.png'
 REF = sys.argv[2] if len(sys.argv) > 2 else 'design/reference/create_song.png'
-OUT = 'build/renders/compare'
+OUT = 'build/renders/compare/' + os.path.splitext(os.path.basename(REF))[0]
 
 # name: (x0, y0, x1, y1, threshold)  -- search window in reference px
-ELEMENTS = {
+CREATE_SONG_ELEMENTS = {
     'back button icon':        (40, 40, 96, 96, 140),
     'wordmark DeenVoice':      (122, 30, 360, 86, 110),
     'tagline':                 (122, 88, 450, 108, 110),
@@ -54,6 +57,55 @@ ELEMENTS = {
     'Adv hint':                (470, 1640, 775, 1668, 90),
     'Generate Song text':      (350, 1732, 570, 1790, 0),
     '1 Credit text':           (700, 1740, 800, 1780, 0),
+}
+
+
+LOGIN_ELEMENTS = {
+    'language pill text':      (655, 118, 775, 158, 110),
+    'wordmark DeenVoice':      (200, 690, 660, 790, 110),
+    'tagline':                 (150, 785, 700, 818, 110),
+    'Welcome Back title':      (200, 940, 650, 1012, 110),
+    'subtitle line 1':         (150, 1022, 700, 1060, 110),
+    'subtitle line 2':         (150, 1064, 700, 1102, 110),
+    'Continue with Google':    (260, 1150, 600, 1205, 0),
+    'Continue with Apple':     (270, 1265, 600, 1320, 110),
+    'OR':                      (395, 1368, 460, 1408, 90),
+    'Continue with Email':     (280, 1455, 600, 1505, 110),
+}
+
+HOME_ELEMENTS = {
+    'wordmark DeenVoice':      (140, 92, 390, 152, 110),
+    'tagline':                 (148, 156, 520, 178, 90),
+    'hero eyebrow':            (60, 250, 340, 276, 90),
+    'Beautiful':               (60, 285, 340, 345, 110),
+    'Islamic Songs':           (60, 346, 440, 405, 110),
+    'hero body line 1':        (60, 418, 430, 446, 110),
+    'hero body line 2':        (60, 447, 430, 476, 110),
+    'Create a Song text':      (92, 505, 262, 545, 0),
+    'tile 1 title':            (45, 700, 200, 742, 110),
+    'tile 2 title':            (250, 700, 405, 742, 110),
+    'tile 1 subtitle':         (45, 742, 200, 790, 90),
+    'Recent Songs heading':    (25, 835, 235, 880, 110),
+    'See All':                 (745, 845, 835, 876, 110),
+    'Quick Start heading':     (25, 1122, 215, 1162, 110),
+    'Quick Start hint':        (25, 1166, 430, 1196, 110),
+    'Continue heading':        (25, 1452, 320, 1498, 110),
+    'Untitled Song':           (150, 1535, 340, 1565, 110),
+    'nav Home label':          (60, 1726, 150, 1766, 90),
+    'nav Library label':       (700, 1726, 800, 1766, 90),
+}
+
+SCREENS = {
+    'create_song': (CREATE_SONG_ELEMENTS, [
+        ('header 0-415', 0, 415), ('song type 415-690', 415, 690), ('voice 690-940', 690, 940),
+        ('lyrics 940-1220', 940, 1220), ('details 1220-1600', 1220, 1600),
+        ('adv+generate 1600-1846', 1600, 1846)]),
+    'login': (LOGIN_ELEMENTS, [
+        ('hero 0-700', 0, 700), ('brand 700-860', 700, 860), ('card 860-1846', 860, 1846)]),
+    'home': (HOME_ELEMENTS, [
+        ('header 0-200', 0, 200), ('hero 200-590', 200, 590), ('tiles 590-830', 590, 830),
+        ('recent 830-1100', 830, 1100), ('quick start 1100-1440', 1100, 1440),
+        ('continue 1440-1650', 1440, 1650), ('nav 1650-1846', 1650, 1846)]),
 }
 
 
@@ -96,6 +148,8 @@ def main():
         print(f'size mismatch: ref {ref.shape} render {ren.shape}')
         ren = np.asarray(Image.open(RENDER).convert('RGB').resize((ref.shape[1], ref.shape[0])))
 
+    stem = os.path.splitext(os.path.basename(REF))[0]
+    ELEMENTS, bands = SCREENS[stem]
     print(f'{"element":26s} {"ref x0-x1 / y0-y1":24s} {"render x0-x1 / y0-y1":24s}  dx   dy  w-ratio')
     for name, box in ELEMENTS.items():
         r, m = ink(ref, box), ink(ren, box)
@@ -109,8 +163,6 @@ def main():
     gref = np.asarray(Image.fromarray(ref).convert('L'))
     gren = np.asarray(Image.fromarray(ren).convert('L'))
     print('\nwhole image: SSIM %.3f   MAE %.2f / 255' % (ssim(gref, gren), np.abs(ref.astype(int) - ren.astype(int)).mean()))
-    bands = [('header 0-415', 0, 415), ('song type 415-690', 415, 690), ('voice 690-940', 690, 940),
-             ('lyrics 940-1220', 940, 1220), ('details 1220-1600', 1220, 1600), ('adv+generate 1600-1846', 1600, 1846)]
     for label, y0, y1 in bands:
         print(f'  {label:26s} SSIM %.3f   MAE %.2f' % (
             ssim(gref[y0:y1], gren[y0:y1]),

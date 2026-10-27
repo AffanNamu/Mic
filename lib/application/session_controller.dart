@@ -49,13 +49,17 @@ class SessionController extends AsyncNotifier<AuthSession?> {
 
   Future<void> _forget() async {
     await ref.read(sessionStoreProvider).clear();
+    // What this user wrote or last looked at stays on this device only until
+    // they leave.
+    await ref.read(draftStoreProvider).clear();
+    await ref.read(activityStoreProvider).clear();
     _resetUserData();
     state = const AsyncData(null);
   }
 
-  /// Nothing one user typed or loaded may be visible to the next.
+  /// Nothing one user typed or loaded may be visible to the next. (The draft
+  /// resets itself: it watches who is signed in.)
   void _resetUserData() {
-    ref.invalidate(songDraftProvider);
     ref.invalidate(voicesProvider);
     ref.invalidate(creditBalanceProvider);
     ref.invalidate(capabilitiesProvider);

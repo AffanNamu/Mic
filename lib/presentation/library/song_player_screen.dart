@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../application/providers.dart';
+import '../../core/format.dart';
 import '../../core/text_direction.dart';
 import '../../core/theme/deen_theme.dart';
 import '../../domain/failures.dart';
@@ -16,12 +17,6 @@ String providerLabel(String id) => switch (id) {
   'mureka' => 'Mureka',
   _ => id,
 };
-
-String formatDuration(Duration d) {
-  final m = d.inMinutes;
-  final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-  return '$m:$s';
-}
 
 /// Plays a saved song through a short-lived signed link, with its lyrics.
 class SongPlayerScreen extends ConsumerStatefulWidget {

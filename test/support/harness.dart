@@ -4,7 +4,10 @@ import 'dart:ui' as ui;
 import 'package:deenvoice/app/app.dart';
 import 'package:deenvoice/application/providers.dart';
 import 'package:deenvoice/application/recording_controller.dart';
+import 'package:deenvoice/data/local/memory_stores.dart';
+import 'package:deenvoice/domain/local/local_stores.dart';
 import 'package:deenvoice/domain/services.dart';
+import 'package:deenvoice/presentation/create_song/create_song_screen.dart';
 import 'package:deenvoice/presentation/create_song/widgets/voice_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -39,12 +42,33 @@ Future<void> loadAppFonts() async {
   await load('packages/lucide_icons_flutter/Lucide', [
     'packages/lucide_icons_flutter/assets/lucide.ttf',
   ]);
+  // `Icons.*` glyphs (for example the Apple mark on the welcome screen).
+  try {
+    await load('MaterialIcons', ['fonts/MaterialIcons-Regular.otf']);
+  } catch (_) {
+    // Not bundled in this test environment: icons render as boxes, nothing else.
+  }
   for (final weight in [300, 500]) {
     await load('packages/lucide_icons_flutter/Lucide$weight', [
       'packages/lucide_icons_flutter/assets/build_font/LucideVariable-w$weight.ttf',
     ]);
   }
 }
+
+/// On-device state held in memory, so no test touches the platform's
+/// key-value store (its plugin is absent under `flutter test`). Onboarding is
+/// already complete unless a test says otherwise.
+List<Override> localStoreOverrides({
+  OnboardingStore? onboarding,
+  DraftStore? drafts,
+  ActivityStore? activity,
+}) => [
+  onboardingStoreProvider.overrideWithValue(
+    onboarding ?? MemoryOnboardingStore(completed: true),
+  ),
+  draftStoreProvider.overrideWithValue(drafts ?? MemoryDraftStore()),
+  activityStoreProvider.overrideWithValue(activity ?? MemoryActivityStore()),
+];
 
 class TestEnv {
   TestEnv({
@@ -75,6 +99,7 @@ class TestEnv {
   final FakeVoiceRecorder? recorder;
 
   List<Override> get overrides => [
+    ...localStoreOverrides(),
     if (recorder != null) ...[
       voiceRecorderFactoryProvider.overrideWithValue(() => recorder!),
       audioPlayerFactoryProvider.overrideWithValue(FakeAudioPlayer.new),
@@ -115,7 +140,7 @@ Future<void> pumpApp(
       overrides: env.overrides,
       child: const RepaintBoundary(
         key: ValueKey('app-root'),
-        child: DeenVoiceApp(),
+        child: DeenVoiceApp(home: CreateSongScreen()),
       ),
     ),
   );
@@ -150,14 +175,16 @@ Future<void> savePng(WidgetTester tester, String path) async {
   });
 }
 
-/// Pumps the app exactly as shipped (every backend service unconfigured). Only
-/// the platform file pickers are replaced, because their plugins cannot run in
-/// a widget test.
+/// Pumps the app exactly as shipped (every backend service unconfigured), from
+/// launch, and opens Create Song the way a user does: from Home. Only the
+/// platform file pickers are replaced, because their plugins cannot run in a
+/// widget test.
 Future<void> pumpProductionApp(
   WidgetTester tester, {
   TextFilePicker? textPicker,
   AudioFilePicker? audioPicker,
   Size size = referenceLogicalSize,
+  bool openCreate = true,
 }) async {
   tester.view.physicalSize = size * referencePixelRatio;
   tester.view.devicePixelRatio = referencePixelRatio;
@@ -167,6 +194,7 @@ Future<void> pumpProductionApp(
     ProviderScope(
       retry: (_, _) => null,
       overrides: [
+        ...localStoreOverrides(),
         if (textPicker != null)
           textFilePickerProvider.overrideWithValue(textPicker),
         if (audioPicker != null)
@@ -182,4 +210,8 @@ Future<void> pumpProductionApp(
     );
   });
   await tester.pumpAndSettle();
+  if (openCreate) {
+    await tester.tap(find.text('Create a Song'));
+    await tester.pumpAndSettle();
+  }
 }

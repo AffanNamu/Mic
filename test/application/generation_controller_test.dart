@@ -15,6 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fakes.dart';
+import '../support/harness.dart';
 
 /// Counts calls so tests can prove what was (not) asked of the backend.
 class _SpyCredits implements CreditsRepository {
@@ -40,6 +41,7 @@ ProviderContainer _container({
   final container = ProviderContainer(
     retry: (_, _) => null,
     overrides: [
+      ...localStoreOverrides(),
       voiceRepositoryProvider.overrideWithValue(
         FakeVoiceRepository(withVoice ? [readyOwnVoice] : const []),
       ),
@@ -73,7 +75,10 @@ GenerationProblem _problem(ProviderContainer c) {
 void main() {
   group('with no backend configured (the shipped defaults)', () {
     test('an otherwise valid song is refused as engine-unavailable', () async {
-      final c = ProviderContainer(retry: (_, _) => null);
+      final c = ProviderContainer(
+        retry: (_, _) => null,
+        overrides: localStoreOverrides(),
+      );
       addTearDown(c.dispose);
       // Instrumental needs no lyrics or voice, so only the engine is missing.
       c.read(songDraftProvider.notifier)
@@ -86,7 +91,10 @@ void main() {
     });
 
     test('a vocal song is refused for the missing voice first', () async {
-      final c = ProviderContainer(retry: (_, _) => null);
+      final c = ProviderContainer(
+        retry: (_, _) => null,
+        overrides: localStoreOverrides(),
+      );
       addTearDown(c.dispose);
       c.read(songDraftProvider.notifier)
         ..setTitle('Ya Rabbi')
@@ -99,7 +107,10 @@ void main() {
     });
 
     test('never produces a receipt', () async {
-      final c = ProviderContainer(retry: (_, _) => null);
+      final c = ProviderContainer(
+        retry: (_, _) => null,
+        overrides: localStoreOverrides(),
+      );
       addTearDown(c.dispose);
       c.read(songDraftProvider.notifier)
         ..setType(SongType.instrumental)

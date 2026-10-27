@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fakes_backend.dart';
+import '../support/harness.dart';
 
 void main() {
   final now = DateTime.utc(2026, 10, 26, 9);
@@ -16,6 +17,7 @@ void main() {
     final c = ProviderContainer(
       retry: (_, _) => null,
       overrides: [
+        ...localStoreOverrides(),
         sessionStoreProvider.overrideWithValue(store ?? MemorySessionStore()),
         authServiceProvider.overrideWithValue(auth ?? FakeAuthService()),
         clockProvider.overrideWithValue(() => now),
@@ -128,7 +130,10 @@ void main() {
   test('without a backend there is nothing to sign in to', () async {
     final c = ProviderContainer(
       retry: (_, _) => null,
-      overrides: [sessionStoreProvider.overrideWithValue(MemorySessionStore())],
+      overrides: [
+        ...localStoreOverrides(),
+        sessionStoreProvider.overrideWithValue(MemorySessionStore()),
+      ],
     );
     addTearDown(c.dispose);
     await c.read(sessionProvider.future);

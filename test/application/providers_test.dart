@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fakes.dart';
+import '../support/harness.dart';
 
 const _enrollingOwn = VoiceProfile(
   id: 'voice-new',
@@ -22,6 +23,7 @@ Future<ProviderContainer> _container(List<VoiceProfile> voices) async {
   final c = ProviderContainer(
     retry: (_, _) => null,
     overrides: [
+      ...localStoreOverrides(),
       voiceRepositoryProvider.overrideWithValue(FakeVoiceRepository(voices)),
     ],
   );
@@ -99,7 +101,10 @@ void main() {
     late SongDraftNotifier notifier;
 
     setUp(() {
-      c = ProviderContainer(retry: (_, _) => null);
+      c = ProviderContainer(
+        retry: (_, _) => null,
+        overrides: localStoreOverrides(),
+      );
       addTearDown(c.dispose);
       notifier = c.read(songDraftProvider.notifier);
     });

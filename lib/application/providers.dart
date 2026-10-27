@@ -8,12 +8,16 @@ import '../data/api/http_services.dart';
 import '../data/api/session_store.dart';
 import '../data/audio/just_audio_player.dart';
 import '../data/file_pickers.dart';
+import '../data/local/preferences_stores.dart';
 import '../data/unconfigured_services.dart';
+import '../data/url_launcher_opener.dart';
 import '../domain/auth/auth.dart';
 import '../domain/credits/pricing.dart';
 import '../domain/failures.dart';
 import '../domain/generation/generation_capabilities.dart';
 import '../domain/library/library.dart';
+import '../domain/links.dart';
+import '../domain/local/local_stores.dart';
 import '../domain/playback/audio_player_port.dart';
 import '../domain/services.dart';
 import '../domain/song/song_validation.dart';
@@ -82,6 +86,34 @@ final consentStatementsProvider = FutureProvider<ConsentStatements?>((ref) {
 /// How often to re-check voices that are still enrolling. Null (the default)
 /// disables polling; the app enables it when a backend is connected.
 final voicePollIntervalProvider = Provider<Duration?>((ref) => null);
+
+// --- Links --------------------------------------------------------------------
+
+final linkOpenerProvider = Provider<LinkOpener>(
+  (ref) => const UrlLauncherOpener(),
+);
+
+/// Terms and Privacy pages, when the build supplies them.
+final legalLinksProvider = Provider<LegalLinks>(
+  (ref) => LegalLinks(
+    terms: parseWebUrl(const String.fromEnvironment('TERMS_URL')),
+    privacy: parseWebUrl(const String.fromEnvironment('PRIVACY_URL')),
+  ),
+);
+
+// --- On-device state ----------------------------------------------------------
+
+final onboardingStoreProvider = Provider<OnboardingStore>(
+  (ref) => const PreferencesOnboardingStore(),
+);
+
+final draftStoreProvider = Provider<DraftStore>(
+  (ref) => const PreferencesDraftStore(),
+);
+
+final activityStoreProvider = Provider<ActivityStore>(
+  (ref) => const PreferencesActivityStore(),
+);
 
 final jobPollIntervalProvider = Provider<Duration>(
   (ref) => const Duration(seconds: 3),

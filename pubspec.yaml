@@ -63,6 +63,7 @@ flutter:
 
   assets:
     - assets/art/
+    - assets/brand/deenvoice_icon_384.webp
 
   fonts:
     - family: PlayfairDisplay
