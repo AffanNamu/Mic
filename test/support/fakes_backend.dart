@@ -333,3 +333,32 @@ class FakeSongLibraryThatFails extends FakeSongLibrary {
     return super.list();
   }
 }
+
+class FakeAccountService implements AccountService {
+  final passwords = <String>[];
+  Object? failure;
+
+  /// Completes the deletion manually when set, to test the in-flight state.
+  Completer<void>? gate;
+
+  AccountDeletion result = const AccountDeletion(
+    voicesDeleted: 2,
+    songsDeleted: 3,
+    disclosure:
+        'Your account, recordings, songs and lyrics were deleted from DeenVoice. '
+        'The music provider could not delete its copy of your voice recordings '
+        'automatically.',
+    kept: [
+      'A record that credits were granted and used.',
+      'A record that consent was given for each voice.',
+    ],
+  );
+
+  @override
+  Future<AccountDeletion> deleteAccount({required String password}) async {
+    passwords.add(password);
+    if (gate != null) await gate!.future;
+    if (failure != null) throw failure!;
+    return result;
+  }
+}

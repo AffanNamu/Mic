@@ -33,6 +33,8 @@ Future<void> pumpScreens(
   FakeVoiceRepository? voiceRepo,
   FakeGenerationService? generation,
   FakeAuthService? auth,
+  FakeAccountService? account,
+  MemorySessionStore? sessionStore,
   DraftStore? drafts,
   List<SongRecord> songs = const [],
   SongLibrary? library,
@@ -61,17 +63,21 @@ Future<void> pumpScreens(
         if (opener != null) linkOpenerProvider.overrideWithValue(opener),
         apiBaseUrlProvider.overrideWithValue('https://api.example.test'),
         clockProvider.overrideWithValue(() => screenNow),
+        accountServiceProvider.overrideWithValue(
+          account ?? FakeAccountService(),
+        ),
         sessionStoreProvider.overrideWithValue(
-          MemorySessionStore(
-            signedIn
-                ? AuthSession(
-                    token: 't',
-                    userId: 'u',
-                    email: 'amina@example.com',
-                    expiresAt: DateTime.utc(2030),
-                  )
-                : null,
-          ),
+          sessionStore ??
+              MemorySessionStore(
+                signedIn
+                    ? AuthSession(
+                        token: 't',
+                        userId: 'u',
+                        email: 'amina@example.com',
+                        expiresAt: DateTime.utc(2030),
+                      )
+                    : null,
+              ),
         ),
         songLibraryProvider.overrideWithValue(
           library ?? FakeSongLibrary(songs),

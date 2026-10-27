@@ -10,6 +10,7 @@ import '../create_song/sheets/credits_sheet.dart';
 import '../shared/dialogs.dart';
 import '../shared/language_sheet.dart';
 import '../voices/manage_voices_screen.dart';
+import 'delete_account_screen.dart';
 
 /// Account and app information, and sign-out.
 class ProfileScreen extends ConsumerWidget {
@@ -24,10 +25,8 @@ class ProfileScreen extends ConsumerWidget {
           'will be removed from this device.',
       confirmLabel: 'Sign out',
     );
-    if (!ok || !context.mounted) return;
-    // The profile is a pushed screen; return to the root first so signing out
-    // lands on the welcome screen rather than behind this one.
-    Navigator.of(context).popUntil((route) => route.isFirst);
+    if (!ok) return;
+    // Signing out closes every open screen (see the app's session guard).
     await ref.read(sessionProvider.notifier).signOut();
   }
 
@@ -140,6 +139,16 @@ class ProfileScreen extends ConsumerWidget {
               onPressed: () => _signOut(context, ref),
               icon: const Icon(LucideIcons.logOut, size: 16),
               label: const Text('Sign out'),
+            ),
+            const SizedBox(height: 10),
+            TextButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const DeleteAccountScreen(),
+                ),
+              ),
+              style: TextButton.styleFrom(foregroundColor: DeenColors.danger),
+              child: const Text('Delete account'),
             ),
           ],
         ],

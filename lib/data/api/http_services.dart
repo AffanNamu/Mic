@@ -64,6 +64,26 @@ class HttpAuthService implements AuthService {
   }
 }
 
+class HttpAccountService implements AccountService {
+  const HttpAccountService(this._api);
+
+  final ApiClient _api;
+
+  @override
+  Future<AccountDeletion> deleteAccount({required String password}) =>
+      guard(() async {
+        final j = asObject(
+          await _api.delete('/v1/me', json: {'password': password}),
+        );
+        return AccountDeletion(
+          voicesDeleted: integer(j, 'voicesDeleted'),
+          songsDeleted: integer(j, 'songsDeleted'),
+          disclosure: str(j, 'disclosure'),
+          kept: [for (final k in asList(j['kept'])) k.toString()],
+        );
+      });
+}
+
 class HttpConsentSource implements ConsentSource {
   const HttpConsentSource(this._api);
 

@@ -49,6 +49,119 @@ void main() {
   late Backend be;
   setUp(() => be = Backend());
 
+  group('account deletion', () {
+    HttpAccountService service({void Function()? onUnauthorized}) {
+      final api = ApiClient(
+        baseUrl: Uri.parse('https://api.example.test'),
+        token: 'tok',
+        onUnauthorized: onUnauthorized,
+        client: MockClient((r) async {
+          be.requests.add(r);
+          final route = be.routes['${r.method} ${r.url.path}'];
+          return route == null
+              ? http.Response(
+                  '{"error":{"code":"x","message":"no route"}}',
+                  404,
+                )
+              : route(r);
+        }),
+      );
+      return HttpAccountService(api);
+    }
+
+    test('sends the password in a DELETE body and reads the result', () async {
+      be.routes['DELETE /v1/me'] = (r) => be.ok({
+        'deleted': true,
+        'voicesDeleted': 2,
+        'songsDeleted': 3,
+        'providerDeletion': 'unsupported',
+        'disclosure': 'Your account was deleted.',
+        'kept': ['A record of credits.', 'A record of consent.'],
+      });
+      final result = await service().deleteAccount(password: 'my password');
+      final request = be.requests.single;
+      expect(request.method, 'DELETE');
+      expect(request.headers['Authorization'], 'Bearer tok');
+      expect(jsonDecode(request.body), {'password': 'my password'});
+      expect(result.voicesDeleted, 2);
+      expect(result.songsDeleted, 3);
+      expect(result.disclosure, 'Your account was deleted.');
+      expect(result.kept, ['A record of credits.', 'A record of consent.']);
+    });
+
+    test(
+      'a wrong password is shown as the server says it and does not sign out',
+      () async {
+        var signedOut = false;
+        be.routes['DELETE /v1/me'] = (r) => be.ok({
+          'error': {
+            'code': 'password_incorrect',
+            'message': 'That password isn’t right.',
+          },
+        }, 403);
+        await expectLater(
+          service(onUnauthorized: () => signedOut = true)
+              .deleteAccount(password: 'x'),
+          throwsA(
+            isA<ServiceFailure>().having(
+              (e) => e.message,
+              'message',
+              'That password isn’t right.',
+            ),
+          ),
+        );
+        expect(
+          signedOut,
+          isFalse,
+          reason: 'a 403 is "no", not "your session ended"',
+        );
+      },
+    );
+
+    test('a song still being made is explained', () async {
+      be.routes['DELETE /v1/me'] = (r) => be.ok({
+        'error': {
+          'code': 'account_busy',
+          'message': 'A song is still being made.',
+        },
+      }, 409);
+      await expectLater(
+        service().deleteAccount(password: 'x'),
+        throwsA(
+          isA<ServiceFailure>().having(
+            (e) => e.message,
+            'message',
+            'A song is still being made.',
+          ),
+        ),
+      );
+    });
+
+    test('a session the server no longer accepts signs the user out', () async {
+      var signedOut = false;
+      be.routes['DELETE /v1/me'] = (r) => be.ok({
+        'error': {'code': 'unauthorized', 'message': 'Sign in required.'},
+      }, 401);
+      await expectLater(
+        service(onUnauthorized: () => signedOut = true)
+            .deleteAccount(password: 'x'),
+        throwsA(isA<SessionExpired>()),
+      );
+      expect(signedOut, isTrue);
+    });
+
+    test(
+      'a response that is not the expected shape is a clear failure',
+      () async {
+        be.routes['DELETE /v1/me'] = (r) => be.ok({'deleted': true});
+        await expectLater(
+          service().deleteAccount(password: 'x'),
+          throwsA(isA<ServiceFailure>()),
+        );
+      },
+    );
+  });
+
   group('capabilities mapping', () {
     test('maps only ids this app knows and reports an unavailable engine truthfully', () async {
       be.routes['GET /v1/generation/capabilities'] = (_) => be.ok({

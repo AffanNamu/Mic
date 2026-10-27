@@ -50,3 +50,30 @@ abstract interface class SessionStore {
 
   Future<void> clear();
 }
+
+/// What deleting an account did, in the server's own words.
+@immutable
+class AccountDeletion {
+  const AccountDeletion({
+    required this.voicesDeleted,
+    required this.songsDeleted,
+    required this.disclosure,
+    required this.kept,
+  });
+
+  final int voicesDeleted;
+  final int songsDeleted;
+
+  /// What was removed, and what the music provider may still hold.
+  final String disclosure;
+
+  /// What the service keeps after deletion, and why.
+  final List<String> kept;
+}
+
+abstract interface class AccountService {
+  /// Deletes the signed-in account. Needs the password again, so a stolen
+  /// session cannot do it. Throws a [ServiceFailure] whose message says what to
+  /// do (wrong password, a song still being made).
+  Future<AccountDeletion> deleteAccount({required String password});
+}

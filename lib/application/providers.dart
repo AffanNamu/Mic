@@ -72,6 +72,11 @@ final authServiceProvider = Provider<AuthService?>((ref) {
   return api == null ? null : HttpAuthService(api);
 });
 
+final accountServiceProvider = Provider<AccountService?>((ref) {
+  final api = ref.watch(apiClientProvider);
+  return api == null ? null : HttpAccountService(api);
+});
+
 final consentSourceProvider = Provider<ConsentSource?>((ref) {
   final api = ref.watch(apiClientProvider);
   return api == null ? null : HttpConsentSource(api);

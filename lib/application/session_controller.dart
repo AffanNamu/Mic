@@ -38,6 +38,17 @@ class SessionController extends AsyncNotifier<AuthSession?> {
     state = AsyncData(session);
   }
 
+  /// Deletes the account on the server. The session keeps working until
+  /// [finishAccountDeletion], so the caller can show what was deleted first.
+  Future<AccountDeletion> deleteAccount(String password) async {
+    final service = ref.read(accountServiceProvider);
+    if (service == null) throw const ServiceNotConfigured('Account deletion');
+    return service.deleteAccount(password: password);
+  }
+
+  /// After the server has deleted the account: forget it on this device.
+  Future<void> finishAccountDeletion() => _forget();
+
   Future<void> signOut() async {
     final auth = ref.read(authServiceProvider);
     if (auth != null) await auth.signOut();

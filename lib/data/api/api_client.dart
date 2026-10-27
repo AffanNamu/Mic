@@ -58,8 +58,11 @@ class ApiClient {
   Future<Object?> patch(String path, {required Object json}) =>
       _send('PATCH', path, json: json);
 
-  Future<Object?> delete(String path, {Map<String, String>? query}) =>
-      _send('DELETE', path, query: query);
+  Future<Object?> delete(
+    String path, {
+    Map<String, String>? query,
+    Object? json,
+  }) => _send('DELETE', path, query: query, json: json);
 
   Future<Object?> putBytes(
     String path,
