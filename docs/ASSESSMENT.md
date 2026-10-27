@@ -77,7 +77,7 @@ What must be established before choosing (from the directive), per candidate:
 6. **Accessibility vs fidelity.** The reference's small type and small targets
    conflict with common mobile guidance (see ARCHITECTURE.md).
 
-## Next milestone
+## Next milestone (Phase 2 — done in part, see ACCEPTANCE_PHASE2.md)
 
 **Phase 2 feasibility, one real end-to-end path** (before more screens):
 

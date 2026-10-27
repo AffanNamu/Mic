@@ -169,3 +169,71 @@ not reliable; they were checked visually instead.)
   tested.
 - **Real device text rendering and the 3x artwork softness** can only be judged
   on hardware.
+
+
+---
+
+# Phase 2 verification (backend, client wiring, full journey)
+
+Everything below was run in this container. **The music provider in every end-to-end run was a
+labelled test double** (a synthetic tone); none of it is evidence about a real AI provider. See
+[ACCEPTANCE_PHASE2.md](ACCEPTANCE_PHASE2.md).
+
+| Command | Result |
+| --- | --- |
+| `cd backend && npm test` | 173 passed, 0 failed |
+| `cd backend && npm run typecheck` | clean |
+| `dart format --output=none --set-exit-if-changed lib test tool` | 0 changed |
+| `flutter analyze` | No issues found |
+| `flutter test --coverage` | 220 passed, 0 failed; `lib/` line coverage 91.5% |
+| `flutter build web --release --no-web-resources-cdn --dart-define=API_BASE_URL=http://127.0.0.1:18080 -o build/web_e2e` | Built |
+| `node tool/web_e2e_backend.mjs build/web_e2e docs/verification/backend_e2e` | **14/14** checks, no page errors (test-double provider) |
+
+## Mutation checks
+
+Confidence that the tests can fail: the source was deliberately broken, one behaviour at a time, and the
+whole suite run each time.
+
+- Backend, 20 breakages: no balance check on reserve; idempotency lookup skipped; request-hash check
+  removed; unknown-outcome submit retried; crashed `submitting` job resubmitted; any bytes accepted as a
+  song; no refund on failure; no capture on success; bad credentials do not block the provider; job
+  deadline ignored; consent not required; recording kept on voice delete; provider "unsupported" deletion
+  reported as deleted; media signature unchecked; song ownership unchecked; auth hook removed; 5xx on a
+  write treated as safe to retry; download URL unvalidated; sessions never expire; default job lease shorter than a provider step → **20/20 caught**, each by a named test (the last one only after a config test was added: it survived at first).
+- Flutter, 14 breakages: submit without the idempotency key; 401 not signing out; expired stored session
+  trusted; previous user's draft kept after sign-out; failed job shown as ready; enrollment without the server's
+  consent version; unavailable engine reported available; add-voice sheet ignoring the server consent text;
+  enrolling voices never re-checked; failed jobs hidden from the library; delete disclosure dropped; lost
+  connection hiding that the outcome is unknown; lyrics invisible to assistive technology; Arabic lyrics laid out
+  left-to-right → **14/14 caught**, each by the test written for it.
+
+  *How this was made trustworthy.* The first run of this check was **invalid**: the baseline suite was already
+  failing (a test still referred to a widget I had replaced), so every mutation "failed" and looked caught. The
+  harness now refuses to run unless the baseline is green and reports the specific failing test. The corrected run
+  found one mutation that **survived** — nothing tested that the lyrics are exposed to screen readers, the very
+  defect found earlier in the browser — and one that did not compile. A semantics test was added (and confirmed
+  to fail on the old code), and the other mutation was redone.
+
+Defects found by the new tests and fixed during this phase (kept here because they show what the tests are for):
+numeric config values were validated after the "any problems?" check, so a bad `PORT` slipped through;
+validation ran before authentication, so anonymous callers got schema errors and the server parsed their
+bodies; Fastify's default validator silently dropped unknown fields and coerced types; a refused connection
+was not recognised as "nothing was sent"; an oversized provider response was swallowed into a generic
+"bad response"; the rename dialog disposed its text controller while still animating closed; the lyrics on the
+player and the "song is ready" message were invisible to assistive technology (found by dumping the
+accessibility tree in Chromium, not by looking at screenshots).
+
+## Real-browser journey against the local backend
+
+`tool/web_e2e_backend.mjs` starts `backend/test/support/e2e-server.ts` (the backend with the test double, on a
+fixed port) and a static server for the web build, then drives Chromium through the accessibility tree:
+
+sign-in screen when signed out → create account (client-side password rule) → operator grants credits → **reload:
+session persisted, real balance** → Create Song (no voices) → Add New Voice shows the **server's** consent text →
+upload a 10 s WAV (file chooser) → "Processing…" → "Personal voice" → Generate with the default language (Hausa)
+refused as unsupported by the engine → choose English → Generate → job followed through real stages → "Your song
+is ready" → Play → "Made with test-double", lyrics shown, `<audio>` fetched the signed URL with `Range`
+(`206 audio/wav`), position advanced → unsigned media URL is 403 → **reload → song still in My Songs → plays
+again** → credits 3 → 2 (reserved, then captured) → sign out → a second account sees no songs.
+
+Limits: Chromium with software GL only; web only; the audio is a tone; no Android/iOS run.

@@ -14,9 +14,10 @@ presentation  →  application  →  domain  ←  data
   progress, pricing estimate, failures, and the **service interfaces**
   (`VoiceRepository`, `CreditsRepository`, `LyricsAssistant`,
   `SongGenerationService`, `TextFilePicker`, `AudioFilePicker`).
-- **data/** implements those interfaces. Today that is only
-  `Unconfigured*` services (empty data / `ServiceNotConfigured`) and the
-  platform file pickers with their validation.
+- **data/** implements those interfaces: `Unconfigured*` stand-ins (empty data /
+  `ServiceNotConfigured`), `data/api/` (an HTTP client and the `Http*` services
+  that talk to the DeenVoice backend), `data/audio/` (a `just_audio` adapter behind
+  `AudioPlayerPort`) and the platform file pickers with their validation.
 - **application/** is Riverpod state: `songDraftProvider`, async providers for
   voices/credits/capabilities, derived providers (selected voice, issues, step
   progress), and `GenerationController`.
@@ -25,9 +26,12 @@ presentation  →  application  →  domain  ←  data
 - **core/** is the design system (tokens, shared widgets, icons) and small
   utilities (text direction detection).
 
-Providers for every integration boundary are overridable in `ProviderScope`; a
-real backend client replaces an `Unconfigured*` service by overriding one
-provider. Tests do exactly that with fakes under `test/support/`.
+Providers for every integration boundary are overridable in `ProviderScope`. With no
+`API_BASE_URL` every boundary resolves to its `Unconfigured*` stand-in, so the
+shipped default is the honest "not connected" app. With `--dart-define=API_BASE_URL=…`
+they resolve to the `Http*` services, which share one `ApiClient` carrying the signed-in
+user's token; signing in or out rebuilds them, so no data survives a change of user.
+Tests override the providers with fakes under `test/support/`.
 
 ## Design rules that shaped the code
 
@@ -64,8 +68,9 @@ provider. Tests do exactly that with fakes under `test/support/`.
 
 ## Backend contract this client requires
 
-These are requirements for the future backend, not descriptions of anything that
-exists. No endpoints are defined or assumed in this repository.
+Implemented by `backend/` (see [BACKEND.md](BACKEND.md) for the API and how each point is
+verified). The list below is the contract the client relies on; the "requires" wording is
+kept because the app is only correct against a backend that honours it.
 
 1. **Authentication and authorization on every call.** A user may only see and
    use their own voices, songs and balance. Client-side hiding is not a boundary.
@@ -109,3 +114,19 @@ On web, `TextField(minLines)` sizes itself from the font's natural line height.
 The lyrics editor therefore states its minimum height explicitly (and forces its
 line height with a strut) so it is the same on every platform. The lyrics
 placeholder still sits about 3 pt higher on web than on the mobile engine.
+
+## Phase 2 additions
+
+- **Session**: `SessionController` restores a stored session (discarding an expired one),
+  signs in/out, and resets per-user state. The API client signs the user out when the
+  server rejects the token.
+- **Consent**: the server owns the consent wording (`GET /v1/consent-statements`). The add-voice
+  sheet shows it verbatim and sends only the version; if it cannot be loaded no voice can be
+  added. Without a backend the sheet falls back to local wording and cannot submit.
+- **Jobs**: `jobWatchProvider` polls one job and yields only server-reported states; transient
+  network errors are retried, a rejected session or repeated failure ends the stream with an
+  error. Nothing is estimated.
+- **Provider honesty in the UI**: a song shows "Made with <provider>" from the server's record,
+  so a song made by a test double says so.
+- **Playback**: the player asks the backend for a signed 5-minute link and plays it; the player
+  sits behind `AudioPlayerPort` so screens are tested without a device.

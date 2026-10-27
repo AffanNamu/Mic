@@ -3,11 +3,17 @@
 AI nasheeds for a brighter Ummah. A Flutter app for creating Islamic devotional
 songs with AI, including singing in a user's own authorized voice.
 
-> **Status: foundation + Create Song screen.** The Create Song screen is built,
-> wired to real application state, and verified. **No backend, AI provider,
-> authentication or billing is connected yet**, so nothing can be generated.
-> The app says so plainly instead of pretending. See [docs/STATUS.md](docs/STATUS.md)
-> for exactly what is real, what is only a boundary, and what is missing.
+> **Status: Phase 2 — the voice → song plumbing exists and is verified; no real AI provider
+> has produced a song yet.** A backend (`backend/`) owns accounts, voice consent, encrypted
+> storage, credits, persistent generation jobs and all provider credentials. The Flutter app
+> can sign in, add a voice with server-owned consent, create a song, follow the job, play it
+> and reopen it from My Songs — **verified in Chromium against a real local backend, with a
+> labelled test double standing in for the music provider** (a synthetic tone). A real
+> provider (Mureka) has an adapter that fails closed and has **never been run**: the build
+> environment blocks its hosts. Acceptance requires a real authorized voice and a real
+> provider; see [docs/ACCEPTANCE_PHASE2.md](docs/ACCEPTANCE_PHASE2.md) for exactly what is
+> proven, what is blocked and how to unblock it, and [docs/STATUS.md](docs/STATUS.md) for
+> the capability matrix.
 
 ## What exists
 
@@ -22,14 +28,25 @@ songs with AI, including singing in a user's own authorized voice.
   empty data or fail with a clear "not connected" message.
 - Voice upload entry with explicit consent capture, voice management, text
   import, and all pickers/sheets the screen needs.
-- 152 automated tests (96% line coverage of `lib/`) plus real-browser checks.
+- Automated tests for the app (see [docs/VERIFICATION.md](docs/VERIFICATION.md)) and 173 for the
+  backend, plus real-browser checks.
+
+- **Backend** (`backend/`, [docs/BACKEND.md](docs/BACKEND.md)): auth, consent records, encrypted
+  private storage, append-only credit ledger, idempotent persistent jobs with crash recovery,
+  signed audio links, operator metrics; a fail-closed Mureka adapter; scripts and a runbook
+  ([docs/poc/](docs/poc/README.md)) for the live proof of concept.
+- Sign-in, **My Songs** library, job progress and a song player in the app (only when a
+  backend is configured).
+- [docs/PROVIDER_EVALUATION.md](docs/PROVIDER_EVALUATION.md): evidence-tagged comparison of
+  seven providers and a one-provider recommendation.
 
 ## What does not exist yet
 
-Authentication, backend, voice enrollment and singing/music providers, lyrics
-assistant, credits and billing, in-app recording, generation progress, the song
-library, and Android/iOS verification. See [docs/ASSESSMENT.md](docs/ASSESSMENT.md)
-for the plan and risks.
+A verified real provider integration (the Mureka contract and voice-cloning path are
+unconfirmed), any Hausa or Arabic singing result, a lyrics assistant, payments/buying
+credits, in-app recording, webhooks, Google/Apple sign-in, and Android/iOS verification.
+See [docs/ACCEPTANCE_PHASE2.md](docs/ACCEPTANCE_PHASE2.md) and
+[docs/ASSESSMENT.md](docs/ASSESSMENT.md).
 
 ## Run it
 
@@ -38,12 +55,27 @@ Requires the Flutter SDK (developed on 3.47.8 / Dart 3.13.7).
 ```sh
 flutter pub get
 flutter run -d chrome          # or any connected device
-flutter test                   # 152 tests
+flutter test
 flutter analyze
 ```
 
-`lib/main.dart` is the shipped entry point and shows only real data, which today
-means: no voices, credits unavailable, generation unavailable.
+`lib/main.dart` is the shipped entry point and shows only real data. With no backend
+configured that means: no voices, credits unavailable, generation unavailable. To connect a
+backend, build with `--dart-define=API_BASE_URL=http://localhost:8080` (and run `backend/`,
+see [docs/BACKEND.md](docs/BACKEND.md); the backend's `CORS_ORIGINS` must include the web
+origin).
+
+### Backend and full-journey checks
+
+```sh
+cd backend && npm ci && npm test      # 173 tests
+cd .. && flutter build web --release --no-web-resources-cdn \
+    --dart-define=API_BASE_URL=http://127.0.0.1:18080 -o build/web_e2e
+node tool/web_e2e_backend.mjs build/web_e2e docs/verification/backend_e2e
+```
+
+The last command starts a local backend **with the labelled test double** and drives the app
+in Chromium. It proves the plumbing, not any provider.
 
 ### Visual verification (design reference vs the real app)
 
@@ -76,14 +108,16 @@ lib/
   app/                 MaterialApp, theme, text-scale policy
   core/                design tokens, shared widgets, icons
   domain/              entities, validation, service interfaces (no Flutter UI)
-  data/                Unconfigured* services, file pickers
-  application/         Riverpod providers, draft + generation controllers
+  data/                Unconfigured* services, api/ (HTTP client + services), audio/, file pickers
+  application/         Riverpod providers, session, draft + generation controllers
   presentation/        screens, sheets, widgets
 test/                  unit, application, widget and render tests (+ fakes)
+backend/               the server: API, jobs, ledger, storage, provider adapters, its own tests
 tool/                  verification scripts (not part of the app)
 design/reference/      the supplied design images (the visual specification)
 assets/                masjid artwork, fonts (OFL), brand icon source
-docs/                  status, architecture, assessment, verification
+docs/                  status, architecture, backend, provider evaluation, PoC runbook,
+                       Phase 2 acceptance, assessment, verification
 ```
 
 ## Documents

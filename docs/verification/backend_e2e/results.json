@@ -1,0 +1,76 @@
+{
+  "when": "2026-10-27T00:06:46.070Z",
+  "provider": "test-double (synthetic tone)",
+  "results": [
+    [
+      "PASS",
+      "signed out: sign-in is shown instead of the app"
+    ],
+    [
+      "PASS",
+      "create an account (10+ char password enforced client-side first)"
+    ],
+    [
+      "PASS",
+      "operator grants credits; after a reload the session persisted and the balance is real"
+    ],
+    [
+      "PASS",
+      "Create Song: no voices yet, honest; engine named; Hausa (the default) is refused by capabilities"
+    ],
+    [
+      "PASS",
+      "Add New Voice shows the SERVER's consent wording and needs the checkbox + a file"
+    ],
+    [
+      "PASS",
+      "uploading a sample enrolls a voice; it shows Processing… then becomes selectable"
+    ],
+    [
+      "PASS",
+      "Generate with the default language (Hausa) is refused: this engine does not support it"
+    ],
+    [
+      "PASS",
+      "choose English, then Generate: a real job is created and followed"
+    ],
+    [
+      "PASS",
+      "Play opens the song: maker is stated as test-double, lyrics shown, audio is fetched with Range and plays"
+    ],
+    [
+      "PASS",
+      "the media link itself is private: without the signature the audio is refused"
+    ],
+    [
+      "PASS",
+      "after a full reload the song is still in the library and plays again"
+    ],
+    [
+      "PASS",
+      "credits: one reserved then captured (3 → 2)"
+    ],
+    [
+      "PASS",
+      "sign out returns to sign-in"
+    ],
+    [
+      "PASS",
+      "API: a second account cannot list or open the first account's song"
+    ]
+  ],
+  "pageErrors": [],
+  "mediaResponses": [
+    {
+      "status": 206,
+      "range": "bytes=0-",
+      "type": "audio/wav"
+    },
+    {
+      "status": 206,
+      "range": "bytes=0-",
+      "type": "audio/wav"
+    }
+  ],
+  "sha": "01c8b5a2df5b"
+}

@@ -49,7 +49,12 @@ runbook is how you do it on a machine that can. Nothing here has been run agains
    It enrolls the voice, creates a persistent job through the same code the API uses, waits for the real
    provider, stores the audio encrypted, re-reads it from the library via a signed link, writes the audio to
    `backend/data/poc-exports/` (private; it contains the participant's voice), and writes
-   `docs/poc/results/<stamp>-result.json` (no audio, lyrics or keys; safe to commit).
+   `docs/poc/results/<stamp>-result.json` (no audio, lyrics or keys; safe to commit; set
+   `POC_OUT_DIR` to write elsewhere).
+
+   The runner's own orchestration (consent → enroll → job → store → retrieve → export → results)
+   is covered by `backend/test/live-poc-flow.test.ts` against a local mock of the *assumed*
+   contract, so a real run should not fail on our own bug. That test is not evidence about Mureka.
 5. **Language probes** — repeat step 4 with `--reuse-voice <voiceId>` (no second $5) and a short Hausa and a
    short Arabic lyric, with `EXPERIMENTAL_LANGUAGES=hausa,arabic`. Expect failure or poor results (Mureka does
    not document either). Record the outcome as an *experiment*.
