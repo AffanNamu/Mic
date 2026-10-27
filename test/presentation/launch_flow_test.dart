@@ -8,17 +8,12 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fakes_backend.dart';
 import '../support/harness.dart';
+import '../support/screen_helpers.dart';
 import '../support/screen_rig.dart';
 
 class _BrokenOnboardingStore extends MemoryOnboardingStore {
   @override
   Future<bool> isCompleted() async => throw StateError('storage unavailable');
-}
-
-Future<void> settle(WidgetTester tester, [int frames = 12]) async {
-  for (var i = 0; i < frames; i++) {
-    await tester.pump(const Duration(milliseconds: 60));
-  }
 }
 
 void main() {
@@ -78,6 +73,17 @@ void main() {
       await settle(tester);
       expect(store.completed, isTrue);
       expect(find.text('Welcome Back'), findsOneWidget);
+    });
+
+    testWidgets('the system Back button goes to the previous page', (
+      tester,
+    ) async {
+      await pumpScreens(tester, signedIn: false, onboarded: false);
+      await tapAndSettle(tester, find.text('Next'));
+      expect(find.text('Only voices you may use'), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await settle(tester);
+      expect(find.text('Songs in your own voice'), findsOneWidget);
     });
 
     testWidgets('Skip does the same from the first page', (tester) async {
@@ -225,6 +231,47 @@ void main() {
       expect(find.text('Welcome Back'), findsOneWidget);
       expect(find.text('Continue with Email'), findsOneWidget);
     });
+
+    testWidgets('Forgot password says plainly that reset is not available', (
+      tester,
+    ) async {
+      await pumpScreens(tester, signedIn: false);
+      await tester.tap(find.text('Continue with Email'));
+      await settle(tester);
+      await tester.ensureVisible(find.text('Forgot password?'));
+      await tapAndSettle(tester, find.text('Forgot password?'));
+      expect(find.text('Password reset isn’t available yet'), findsOneWidget);
+      expect(find.textContaining('can’t send email yet'), findsOneWidget);
+      await tapAndSettle(tester, find.text('OK'));
+      expect(find.text('Sign in with email'), findsOneWidget);
+    });
+
+    testWidgets(
+      'Forgot password is offered when signing in, not when creating',
+      (tester) async {
+        await pumpScreens(tester, signedIn: false);
+        await tester.tap(find.text('Continue with Email'));
+        await settle(tester);
+        expect(find.text('Forgot password?'), findsOneWidget);
+        await tester.ensureVisible(find.text('Create a new account'));
+        await tapAndSettle(tester, find.text('Create a new account'));
+        expect(find.text('Forgot password?'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'the system Back button leaves the email form for the choices',
+      (tester) async {
+        await pumpScreens(tester, signedIn: false);
+        await tester.tap(find.text('Continue with Email'));
+        await settle(tester);
+        expect(find.text('Sign in with email'), findsOneWidget);
+        await tester.binding.handlePopRoute();
+        await settle(tester);
+        expect(find.text('Welcome Back'), findsOneWidget);
+        expect(find.text('Sign in with email'), findsNothing);
+      },
+    );
 
     testWidgets('with no Terms or Privacy page it does not claim agreement', (
       tester,

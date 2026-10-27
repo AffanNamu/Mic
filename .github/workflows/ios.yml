@@ -8,6 +8,7 @@ name: iOS build
 # Secrets (signing):  IOS_DIST_CERT_P12_B64, IOS_DIST_CERT_PASSWORD, IOS_PROVISION_PROFILE_B64, KEYCHAIN_PASSWORD
 # Secrets (upload):   ASC_API_KEY_ID, ASC_API_ISSUER_ID, ASC_API_KEY_P8_B64
 # Variables:          API_BASE_URL (public https URL of the DeenVoice backend; not a secret)
+#                     TERMS_URL, PRIVACY_URL (public pages; the app links to them only when both are set)
 #
 # The team ID and the provisioning profile name are read from the profile itself, so they
 # are not separate secrets. The profile's App ID must match BUNDLE_ID below (and the
@@ -48,6 +49,8 @@ jobs:
       FLUTTER_VERSION: '3.47.8'
       BUNDLE_ID: app.deenvoice.deenvoice
       API_BASE_URL: ${{ vars.API_BASE_URL }}
+      TERMS_URL: ${{ vars.TERMS_URL }}
+      PRIVACY_URL: ${{ vars.PRIVACY_URL }}
       HAVE_SIGNING: ${{ secrets.IOS_DIST_CERT_P12_B64 != '' && secrets.IOS_DIST_CERT_PASSWORD != '' && secrets.IOS_PROVISION_PROFILE_B64 != '' && secrets.KEYCHAIN_PASSWORD != '' }}
     steps:
       - uses: actions/checkout@v4
@@ -81,6 +84,12 @@ jobs:
           set -euo pipefail
           args=(--release --no-codesign --build-number="${{ github.run_number }}")
           [ -z "${API_BASE_URL:-}" ] || args+=("--dart-define=API_BASE_URL=${API_BASE_URL}")
+          # Terms and Privacy links appear in the app only when both are set.
+          if [ -n "${TERMS_URL:-}" ] && [ -n "${PRIVACY_URL:-}" ]; then
+            args+=("--dart-define=TERMS_URL=${TERMS_URL}" "--dart-define=PRIVACY_URL=${PRIVACY_URL}")
+          else
+            echo "::warning::vars.TERMS_URL and vars.PRIVACY_URL are not both set: the app will say its Terms and Privacy Policy are not published."
+          fi
           flutter build ios "${args[@]}"
           test -d build/ios/iphoneos/Runner.app
 
@@ -177,6 +186,12 @@ jobs:
 
           args=(--release --build-number="${{ github.run_number }}" --export-options-plist=ios/ExportOptions.plist)
           [ -z "${API_BASE_URL:-}" ] || args+=("--dart-define=API_BASE_URL=${API_BASE_URL}")
+          # Terms and Privacy links appear in the app only when both are set.
+          if [ -n "${TERMS_URL:-}" ] && [ -n "${PRIVACY_URL:-}" ]; then
+            args+=("--dart-define=TERMS_URL=${TERMS_URL}" "--dart-define=PRIVACY_URL=${PRIVACY_URL}")
+          else
+            echo "::warning::vars.TERMS_URL and vars.PRIVACY_URL are not both set: the app will say its Terms and Privacy Policy are not published."
+          fi
           flutter build ipa "${args[@]}"
 
       - name: Verify IPA

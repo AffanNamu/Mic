@@ -469,6 +469,23 @@ void main() {
       handle.dispose();
     });
 
+    testWidgets('the system Back button on another tab goes to Home first', (
+      tester,
+    ) async {
+      await pumpScreens(tester, signedIn: true);
+      await openTab(tester, 'Library');
+      expect(find.text('Your songs and projects'), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await settle(tester);
+      expect(find.text('Create a Song'), findsOneWidget);
+      expect(find.text('Your songs and projects'), findsNothing);
+
+      await openTab(tester, 'My Voice');
+      await tester.binding.handlePopRoute();
+      await settle(tester);
+      expect(find.text('Create a Song'), findsOneWidget);
+    });
+
     testWidgets(
       'Create and + both open Create Song over the bar, and Back returns to the same tab',
       (tester) async {

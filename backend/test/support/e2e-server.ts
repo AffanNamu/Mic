@@ -46,5 +46,5 @@ const app = buildApp(deps);
 const worker = new JobWorker(deps);
 worker.start(500);
 await app.listen({ host: '127.0.0.1', port });
-console.log(JSON.stringify({ ready: true, port, adminToken: ADMIN_TOKEN, provider: provider.name }));
+console.log(JSON.stringify({ ready: true, port, adminToken: ADMIN_TOKEN, provider: provider.name, blobDir: config.blobDir }));
 for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => { worker.stop(); void app.close().then(() => process.exit(0)); });

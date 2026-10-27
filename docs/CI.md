@@ -19,6 +19,7 @@ pull requests or manually). See "What is and is not verified".
 | Name | Value |
 | --- | --- |
 | `API_BASE_URL` | Public `https://` URL of the DeenVoice backend. Not a secret. The backend's `CORS_ORIGINS` must include the origin the web app is served from |
+| `TERMS_URL`, `PRIVACY_URL` | Public pages for the Terms of Service and Privacy Policy. Set **both** or neither: the sign-in screen says "By continuing, you agree to…" only when both exist (otherwise it says the documents are not published), and Profile links each page that exists. Store review will expect real ones |
 
 Signed Android and iOS builds **fail** if this is missing or not `https://`, so you cannot
 publish an app that says "not connected". Provider keys (e.g. Mureka) never go in any workflow

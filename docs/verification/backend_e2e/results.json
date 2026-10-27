@@ -1,5 +1,5 @@
 {
-  "when": "2026-10-27T06:08:05.825Z",
+  "when": "2026-10-27T06:30:53.486Z",
   "provider": "test-double (synthetic tone)",
   "results": [
     [
@@ -72,6 +72,10 @@
     ],
     [
       "PASS",
+      "sign in again, then delete the account: a wrong password is explained, the right one deletes everything"
+    ],
+    [
+      "PASS",
       "API: a second account cannot list or open the first account's song"
     ]
   ],
@@ -88,5 +92,5 @@
       "type": "audio/wav"
     }
   ],
-  "sha": "f9c944d20bc7"
+  "sha": "650f4dd9b3b0"
 }

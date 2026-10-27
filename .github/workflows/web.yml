@@ -40,6 +40,8 @@ jobs:
       # A repository *variable* (Settings > Secrets and variables > Actions > Variables).
       # It is a public URL, not a secret. Provider keys never belong in the app.
       API_BASE_URL: ${{ vars.API_BASE_URL }}
+      TERMS_URL: ${{ vars.TERMS_URL }}
+      PRIVACY_URL: ${{ vars.PRIVACY_URL }}
     steps:
       - uses: actions/checkout@v4
 
@@ -59,6 +61,12 @@ jobs:
             args+=("--dart-define=API_BASE_URL=${API_BASE_URL}")
           else
             echo "::warning::vars.API_BASE_URL is not set: this build is the unconnected app (every service says it is not connected)."
+          fi
+          # Terms and Privacy links appear in the app only when both are set.
+          if [ -n "${TERMS_URL:-}" ] && [ -n "${PRIVACY_URL:-}" ]; then
+            args+=("--dart-define=TERMS_URL=${TERMS_URL}" "--dart-define=PRIVACY_URL=${PRIVACY_URL}")
+          else
+            echo "::warning::vars.TERMS_URL and vars.PRIVACY_URL are not both set: the app will say its Terms and Privacy Policy are not published."
           fi
           flutter build web "${args[@]}"
 

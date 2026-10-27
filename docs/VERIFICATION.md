@@ -1,5 +1,9 @@
 # Verification report
 
+> Sections run in the order the work was done: Milestone 1 (Create Song), Phase 2 (backend and
+> client wiring), then the **UI milestone** (introduction, welcome, Home, tabs, recording, account
+> deletion) at the end of this file, which has the latest numbers.
+
 Everything below was run in this repository's cloud container. Numbers are from
 the final runs.
 
@@ -237,4 +241,121 @@ is ready" → Play → "Made with test-double", lyrics shown, `<audio>` fetched 
 (`206 audio/wav`), position advanced → unsigned media URL is 403 → **reload → song still in My Songs → plays
 again** → credits 3 → 2 (reserved, then captured) → sign out → a second account sees no songs.
 
+*(Superseded by the UI-milestone journey below, which has 19 checks.)*
+
 Limits: Chromium with software GL only; web only; the audio is a tone; no Android/iOS run.
+
+---
+
+# UI milestone verification (introduction, welcome, Home, shell, recording, deletion)
+
+Everything here was run in this container. The music provider in every end-to-end run was the labelled
+test double, so none of it says anything about a real AI provider; the microphone in the browser run was
+Chromium's fake device playing a tone, so no human voice was recorded; no Android or iOS build was made.
+
+| Command | Result |
+| --- | --- |
+| `cd backend && npm test` | 189 passed, 0 failed |
+| `cd backend && npm run typecheck` | clean |
+| `dart format --output=none --set-exit-if-changed lib test tool` | 0 changed |
+| `flutter analyze` | No issues found |
+| `flutter test --coverage` | **514 passed, 0 failed**; `lib/` line coverage 93.7% (4310/4601) |
+| `flutter build web --release --no-web-resources-cdn --dart-define=API_BASE_URL=http://127.0.0.1:18080 -o build/web_e2e` | Built |
+| `node tool/web_e2e_backend.mjs build/web_e2e docs/verification/backend_e2e` | **19/19** checks, no page errors (test-double provider) |
+| `node tool/web_flow_check.mjs build/web …` (production build, no backend) | **16/16** checks, no page errors |
+
+## What the new tests cover
+
+- **Launch flow** (`launch_flow_test.dart`, 24): the introduction page by page, what it says (no promise of a
+  result; the provider-copy limit), Skip and Get started record it, it is not shown twice, a device that cannot
+  say whether it was seen still opens the app; which screen opens with and without a backend; on the welcome
+  screen Google and Apple are disabled and say so, email is the way in, the Terms sentence appears only when
+  both pages exist, links open them or say they could not, the language sheet, the form above the keyboard.
+- **Home and the bottom bar** (`home_test.dart`, 31): every shortcut goes where it says; no demo video; real songs,
+  songs in progress and failures; a template changes only language and style and is disabled when the engine
+  cannot sing its language; the draft is offered, restored, discarded (after asking), never shown to another
+  user; the bell; tab switching with the right selected state; Create and + over the bar.
+- **Activity** (13): every state worded from the server's report, what was new stays marked while the bell clears,
+  per account; the unseen count (counts only songs that finished or failed since the last visit).
+- **Profile and deletion** (11 + 10): the account, credits, the engine's real state, the legal links, sign-out
+  (asks first, erases the draft), and deletion (says what is deleted, kept and held by the provider; a wrong password
+  is explained and signs nobody out; locked while running; on success the server's disclosure is shown, then the
+  device is wiped and every screen closed).
+- **Tabs** (10): voices and Library, including a voice deleted in one tab being gone from Create Song.
+- **Layout** (120): nine screens × six screen sizes × two text scales, none overflowing.
+- **On-device state**: draft codec (5), preference stores (7), draft persistence (15): debounce, owner scoping,
+  a slow restore never overwriting what was typed, sign-out erasing everything.
+- **Recording** (`record_voice_test.dart` and friends): see the in-app recording rows in STATUS.md. A real browser
+  showed that the timer, hint and Stop control were merged into one accessibility node; the test that now guards
+  it fails without the fix.
+
+## Visual comparison with the references
+
+Widget-test renders at the reference size (426 × 923 @2x) against `design/reference/login.png` and `home.png`
+(`tool/compare_render.py`, side-by-sides in `docs/verification/screens/`). The status bar and home indicator are
+drawn by the operating system, so the renders include insets rather than the references' pictures of them.
+
+| | Result |
+| --- | --- |
+| Welcome, hero (arch and mosque) | SSIM 0.93 |
+| Welcome, whole image | SSIM 0.78; text widths within 1–2 % and rows within 0–8 px of the reference |
+| Home, header / tiles | text widths 99–101 %, rows within 2–5 px |
+| Home, whole image | SSIM 0.60 |
+
+Home's number is low for stated reasons, not hidden ones: the reference shows a photo avatar and a different
+order of cover pictures, "Watch Demo" is "How it works", "Write Lyrics" has a different second line, there is no
+"Popular" badge, and the reference's song titles and languages are invented. Element positions and widths are the
+better measure. Remaining differences: the Welcome arch is hand-drawn in code and not identical; Google and Apple
+are dimmed because they are disabled; the cover pictures are screenshot resolution (soft on 3x displays).
+
+## Defects the checks found (kept because they show what the checks are for)
+
+- In a **real browser** the recorder's Stop control could not be found by assistive technology: Flutter had merged
+  the timer, the hint and the control into one node. Widget tests that tapped by text had passed. Fixed; a semantics
+  test now fails without the fix.
+- A **scan of the whole database** after account deletion found the voice's display name still stored on songs.
+  Fixed in account, song and voice deletion.
+- Activity changed a provider while the screen was being built (caught by the render test, not by looking).
+- The hero card overflowed at 1.3× text and at 320 px wide.
+- The production flow script (and the preview entry point) assumed the app opens on Create Song; both were
+  updated for the launch flow.
+
+## Mutation checks on the new logic
+
+**Flutter, 20 deliberate breakages of the new logic: 20/20 caught**, each by a named test: another user's saved draft
+restored; a slow restore overwriting what was typed; an empty draft saved as "work"; discard leaving the draft on the
+device; a draft saved while nobody is signed in; sign-out keeping the draft, and keeping the activity marker; songs still
+being made counted as unseen; the last visit ignored; a visit never remembered; the introduction not remembered, and never
+shown; the welcome screen claiming agreement to a Terms page that does not exist; Quick Start offering a language the
+engine cannot sing; a default draft shown as work to continue; the device not wiped after deleting the account; open
+screens staying over the welcome screen after the session ends; the draft codec accepting any version; the account DELETE
+sent without the password; Google sign-in looking available; "yesterday" computed wrongly. The run was made in two parts
+(the first was too slow, so it was interrupted after three results and finished against the test files that cover each
+breakage; any breakage those files missed would have been re-run against the whole suite, and none needed to be).
+
+**Backend, 15 breakages of the account-deletion code: 15/15 caught.** One survived the first time: scrubbing the voice
+name from songs was redundant with `deleteSong` doing it already, so no test could tell. A test using a row from before
+the fix was added, and the breakage is now caught.
+
+
+## Real-browser journey, UI milestone (19 checks)
+
+`tool/web_e2e_backend.mjs`, same set-up as above, now: the introduction on first launch → Welcome (Google/Apple shown
+disabled with their note) → create an account → reload (session persists, introduction does not return) → Profile shows
+the real balance and "Not published yet" for Terms and Privacy → Create Song → consent text from the server → upload a
+sample → **record from a Chromium fake microphone** and enroll it (the server sees one more voice) → Hausa refused →
+**reload: the draft is in the browser's storage, Home offers it, Continue brings the words back (the counter reads
+40/3000)** → English → generate, follow, play (Range, position advances) → unsigned media link 403 → reload: the song is on
+Home and the bell says "Activity, 1 new" → Activity lists it and opening it clears the bell and stores the time → Library
+and My Voice show the real data → credits 3 → 2 → **sign-out asks first and erases the draft, activity marker and
+session from local storage** → sign in again → **delete the account: a wrong password is explained and deletes nothing; the
+right one shows the server's disclosure, empties private storage, wipes the device and the old credentials no longer sign
+in**. 19/19, no page errors. The production build with no backend: 16/16 (`tool/web_flow_check.mjs`).
+
+Limits: Chromium with software GL only; web only; the audio is a tone and the microphone a fake device; no Android or iOS
+run of the app itself (the GitHub build workflows below only compile it).
+
+## What the GitHub workflows have shown
+
+See [CI.md](CI.md#what-is-and-is-not-verified): the Android release APK, the unsigned iOS build and the web build compiled on
+GitHub before in-app recording was added; they are re-run on the current head and the result recorded there.

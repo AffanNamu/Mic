@@ -1,7 +1,8 @@
 // Drives the Flutter web build against a REAL local DeenVoice backend in a real browser:
 // first launch (introduction) → sign up → refresh (session persists) → add a voice with server consent,
 // uploaded and recorded from a fake microphone → draft survives a reload → generate → follow the job
-// → play → Home, Activity, Library, My Voice and Profile from the real data → sign out (and what it erases).
+// → play → Home, Activity, Library, My Voice and Profile from the real data → sign out (and what it erases)
+// → sign in again and delete the account (wrong password, then right: storage empty, device wiped).
 //
 // !! The music provider behind the backend is the labelled TEST DOUBLE (a synthetic tone). !!
 // This proves the app ↔ API ↔ job pipeline ↔ storage ↔ playback wiring. It is NOT evidence that any
@@ -11,7 +12,7 @@
 //   node tool/web_e2e_backend.mjs build/web_e2e docs/verification/backend_e2e
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
-import { readFile, stat, mkdir, writeFile } from 'node:fs/promises';
+import { readFile, stat, mkdir, writeFile, readdir } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createRequire } from 'node:module';
@@ -348,6 +349,43 @@ await step('sign out asks first, ends the session, and erases the draft and acti
   const left = await page.evaluate(() => Object.keys(localStorage).filter((k) => /deenvoice\.(draft|activity|session)/.test(k)));
   if (left.length) throw new Error(`still on the device after sign-out: ${left.join(', ')}`);
   await shot('signed_out_again');
+});
+
+await step('sign in again, then delete the account: a wrong password is explained, the right one deletes everything', async () => {
+  await click('Continue with Email');
+  await typeInto('Email', 'participant@example.com');
+  await typeInto('Password', 'a sound password 123');
+  await click('Sign in');
+  await visible('Create a Song');
+  const stored = async () => (await readdir(ready.blobDir, { recursive: true, withFileTypes: true })).filter((d) => d.isFile()).length;
+  const before = await stored();
+  if (before < 3) throw new Error(`expected two recordings and a song in storage, found ${before}`);
+
+  await click('Profile');
+  await click('Delete account');
+  await visible('This can’t be undone');
+  await visible('What the music provider may keep');
+  await shot('delete_account');
+  await typeInto('Your password', 'not the password');
+  await click('Delete my account');
+  await visible('That password isn’t right.');
+  if ((await stored()) !== before) throw new Error('a wrong password deleted something');
+  await shot('delete_account_wrong_password');
+
+  await page.getByRole('textbox', { name: 'Your password' }).click({ force: true });
+  await page.keyboard.press('Control+A'); await page.keyboard.press('Backspace');
+  await page.keyboard.type('a sound password 123', { delay: 30 });
+  await click('Delete my account');
+  await visible('Your account was deleted');
+  await visible('could not delete its copy of your voice recordings'); // the test double cannot delete provider-side, and says so
+  await shot('account_deleted');
+  await click('OK');
+  await visible('Welcome Back');
+  const left = await page.evaluate(() => Object.keys(localStorage).filter((k) => /deenvoice\.(draft|activity|session)/.test(k)));
+  if (left.length) throw new Error(`still on the device after deletion: ${left.join(', ')}`);
+  if ((await stored()) !== 0) throw new Error(`private storage still holds ${await stored()} files`);
+  const login = await fetch(`${API}/v1/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: 'participant@example.com', password: 'a sound password 123' }) });
+  if (login.status !== 401) throw new Error(`the deleted account can still sign in (${login.status})`);
 });
 
 // Cross-account isolation is exercised through the API (the backend suite covers it exhaustively).

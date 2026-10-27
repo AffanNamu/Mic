@@ -6,8 +6,10 @@ songs with AI, including singing in a user's own authorized voice.
 > **Status: Phase 2 — the voice → song plumbing exists and is verified; no real AI provider
 > has produced a song yet.** A backend (`backend/`) owns accounts, voice consent, encrypted
 > storage, credits, persistent generation jobs and all provider credentials. The Flutter app
-> can sign in, add a voice with server-owned consent, create a song, follow the job, play it
-> and reopen it from My Songs — **verified in Chromium against a real local backend, with a
+> can show an introduction and a welcome screen, sign in, record or upload a voice with
+> server-owned consent, create a song, follow the job, play it, and find it again on Home, in the
+> Library and in Activity; it can also delete the account — **verified in Chromium against a real
+> local backend (with a fake microphone), with a
 > labelled test double standing in for the music provider** (a synthetic tone). A real
 > provider (Mureka) has an adapter that fails closed and has **never been run**: the build
 > environment blocks its hosts. Acceptance requires a real authorized voice and a real
@@ -28,15 +30,20 @@ songs with AI, including singing in a user's own authorized voice.
   empty data or fail with a clear "not connected" message.
 - Voice upload entry with explicit consent capture, voice management, text
   import, and all pickers/sheets the screen needs.
-- Automated tests for the app (see [docs/VERIFICATION.md](docs/VERIFICATION.md)) and 173 for the
+- Automated tests for the app (see [docs/VERIFICATION.md](docs/VERIFICATION.md)) and 189 for the
   backend, plus real-browser checks.
 
 - **Backend** (`backend/`, [docs/BACKEND.md](docs/BACKEND.md)): auth, consent records, encrypted
   private storage, append-only credit ledger, idempotent persistent jobs with crash recovery,
   signed audio links, operator metrics; a fail-closed Mureka adapter; scripts and a runbook
   ([docs/poc/](docs/poc/README.md)) for the live proof of concept.
-- Sign-in, **My Songs** library, job progress and a song player in the app (only when a
-  backend is configured).
+- **The rest of the app**: first-launch introduction, a welcome/sign-in screen (`login.png`), **Home**
+  (`home.png`) with recent songs, templates and the unfinished draft, a bottom bar with My Voice
+  and Library tabs, Activity with a bell count, Profile, **in-app voice recording**, and account
+  deletion. Everything shows real data or says it is not connected; nothing is invented. Where a
+  reference promises something that does not exist (Google/Apple sign-in, a demo video, AI lyric
+  help, a Terms page) the screen says so; the list is in [docs/STATUS.md](docs/STATUS.md).
+- Job progress and a song player in the app (only when a backend is configured).
 - [docs/PROVIDER_EVALUATION.md](docs/PROVIDER_EVALUATION.md): evidence-tagged comparison of
   seven providers and a one-provider recommendation.
 
@@ -44,8 +51,9 @@ songs with AI, including singing in a user's own authorized voice.
 
 A verified real provider integration (the Mureka contract and voice-cloning path are
 unconfirmed), any Hausa or Arabic singing result, a lyrics assistant, payments/buying
-credits, webhooks, Google/Apple sign-in, and Android/iOS verification (in-app recording is built and
-verified on web with a fake microphone, not on a device).
+credits, webhooks, Google/Apple sign-in (drawn, disabled), published Terms and Privacy pages, password
+reset and email verification, and Android/iOS verification (in-app recording is built and verified on
+web with a fake microphone, not on a device).
 See [docs/ACCEPTANCE_PHASE2.md](docs/ACCEPTANCE_PHASE2.md) and
 [docs/ASSESSMENT.md](docs/ASSESSMENT.md).
 
@@ -69,7 +77,7 @@ origin).
 ### Backend and full-journey checks
 
 ```sh
-cd backend && npm ci && npm test      # 173 tests
+cd backend && npm ci && npm test      # 189 tests
 cd .. && flutter build web --release --no-web-resources-cdn \
     --dart-define=API_BASE_URL=http://127.0.0.1:18080 -o build/web_e2e
 node tool/web_e2e_backend.mjs build/web_e2e docs/verification/backend_e2e
@@ -98,8 +106,21 @@ flutter build web --release --no-web-resources-cdn
 node tool/web_flow_check.mjs build/web build/renders/flows
 ```
 
+The Welcome and Home screens are compared the same way, from widget-test renders (no browser):
+
+```sh
+flutter test test/render/                    # writes build/renders/login.png, home.png, screens/*.png
+python3 tool/compare_render.py build/renders/login.png design/reference/login.png
+python3 tool/compare_render.py build/renders/home.png  design/reference/home.png
+python3 tool/extract_art.py                  # regenerates the art cut from the references
+```
+
 Needs Node with `playwright` and Pillow/NumPy for the Python tool. Results are in
 [docs/VERIFICATION.md](docs/VERIFICATION.md).
+
+To show the Terms and Privacy links, build with `--dart-define=TERMS_URL=https://…
+--dart-define=PRIVACY_URL=https://…` (both are needed; otherwise the screens say the documents are
+not published).
 
 ## CI/CD
 

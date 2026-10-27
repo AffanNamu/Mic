@@ -20,11 +20,10 @@ class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
 
   @override
-  ConsumerState<AppShell> createState() => AppShellState();
+  ConsumerState<AppShell> createState() => _AppShellState();
 }
 
-/// Public so a tab can ask the shell to switch tabs.
-class AppShellState extends ConsumerState<AppShell> {
+class _AppShellState extends ConsumerState<AppShell> {
   ShellTab _tab = ShellTab.home;
   Timer? _poll;
 
@@ -80,19 +79,30 @@ class AppShellState extends ConsumerState<AppShell> {
       }
     });
 
-    return Scaffold(
-      extendBody: true,
-      body: switch (_tab) {
-        ShellTab.home => HomeTab(onOpenCreate: openCreate, onSelectTab: select),
-        ShellTab.myVoice => const MyVoiceTab(),
-        ShellTab.library => LibraryTab(onCreate: openCreate),
+    // The system Back button on My Voice or Library goes to Home first; only
+    // on Home does it leave the app.
+    return PopScope(
+      canPop: _tab == ShellTab.home,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) select(ShellTab.home);
       },
-      bottomNavigationBar: _NavBar(
-        selected: _tab,
-        onHome: () => select(ShellTab.home),
-        onCreate: openCreate,
-        onMyVoice: () => select(ShellTab.myVoice),
-        onLibrary: () => select(ShellTab.library),
+      child: Scaffold(
+        extendBody: true,
+        body: switch (_tab) {
+          ShellTab.home => HomeTab(
+            onOpenCreate: openCreate,
+            onSelectTab: select,
+          ),
+          ShellTab.myVoice => const MyVoiceTab(),
+          ShellTab.library => LibraryTab(onCreate: openCreate),
+        },
+        bottomNavigationBar: _NavBar(
+          selected: _tab,
+          onHome: () => select(ShellTab.home),
+          onCreate: openCreate,
+          onMyVoice: () => select(ShellTab.myVoice),
+          onLibrary: () => select(ShellTab.library),
+        ),
       ),
     );
   }

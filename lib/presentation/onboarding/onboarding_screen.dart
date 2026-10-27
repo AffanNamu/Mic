@@ -77,59 +77,71 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          const Positioned(top: 0, left: 0, right: 0, child: _Backdrop()),
-          SafeArea(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 480),
-                child: Column(
-                  children: [
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(8, 8, 12, 0),
-                        child: Opacity(
-                          opacity: _last ? 0 : 1,
-                          child: TextButton(
-                            onPressed: _last || _finishing ? null : _finish,
-                            child: const Text('Skip'),
+    return PopScope(
+      canPop: _index == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          _controller.previousPage(
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOut,
+          );
+        }
+      },
+      child: Scaffold(
+        body: Stack(
+          children: [
+            const Positioned(top: 0, left: 0, right: 0, child: _Backdrop()),
+            SafeArea(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 480),
+                  child: Column(
+                    children: [
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(8, 8, 12, 0),
+                          child: Opacity(
+                            opacity: _last ? 0 : 1,
+                            child: TextButton(
+                              onPressed: _last || _finishing ? null : _finish,
+                              child: const Text('Skip'),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: PageView.builder(
-                        controller: _controller,
-                        itemCount: _pages.length,
-                        onPageChanged: (i) => setState(() => _index = i),
-                        itemBuilder: (context, i) => _PageView(page: _pages[i]),
-                      ),
-                    ),
-                    Semantics(
-                      label: 'Page ${_index + 1} of ${_pages.length}',
-                      liveRegion: true,
-                      child: ExcludeSemantics(child: _Dots(index: _index)),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 22, 24, 28),
-                      child: SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: FilledButton(
-                          onPressed: _finishing ? null : _next,
-                          child: Text(_last ? 'Get started' : 'Next'),
+                      Expanded(
+                        child: PageView.builder(
+                          controller: _controller,
+                          itemCount: _pages.length,
+                          onPageChanged: (i) => setState(() => _index = i),
+                          itemBuilder: (context, i) =>
+                              _PageView(page: _pages[i]),
                         ),
                       ),
-                    ),
-                  ],
+                      Semantics(
+                        label: 'Page ${_index + 1} of ${_pages.length}',
+                        liveRegion: true,
+                        child: ExcludeSemantics(child: _Dots(index: _index)),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 22, 24, 28),
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: FilledButton(
+                            onPressed: _finishing ? null : _next,
+                            child: Text(_last ? 'Get started' : 'Next'),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

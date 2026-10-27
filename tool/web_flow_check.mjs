@@ -1,7 +1,7 @@
 // Drives the production web build in Chromium through its accessibility tree
 // and asserts what a real user would see. No test doubles: this is lib/main.dart
 // with every backend unconfigured, so each action must either work locally or
-// say plainly what is missing.
+// say plainly what is missing. First launch: introduction, then Home, then Create Song and the tabs.
 //
 //   node tool/web_flow_check.mjs build/web build/renders/flows
 import { createServer } from 'node:http';
@@ -67,9 +67,25 @@ const typeInto = async (name, text) => {
   await page.waitForTimeout(400);
 };
 const btn = (name) => page.getByRole('button', { name, exact: false }).first();
+const nav = async (name) => { await page.getByRole('button', { name, exact: true }).last().click({ force: true }); await page.waitForTimeout(500); };
 
-await step('app loads and exposes the page title', async () => {
-  await visible('Create Song');
+await step('first launch shows the introduction; Skip goes to Home', async () => {
+  await visible('Songs in your own voice');
+  await shot('onboarding');
+  await btn('Skip').click({ force: true });
+  await visible('Create a Song');
+  await shot('home_unconnected');
+});
+await step('Home with no backend says nothing is connected and shows no songs, drafts or notifications', async () => {
+  await visible('Recent Songs');
+  await visible('isn’t connected to a DeenVoice service');
+  await gone('Continue Your Work');
+  await gone('Activity, 1 new');
+  await gone('Watch Demo'); // there is no video
+});
+await step('Create a Song opens Create Song', async () => {
+  await btn('Create a Song').click({ force: true });
+  await visible('Generate Song');
   await shot('initial_production_state');
 });
 await step('credit pill is honest when billing is unavailable', async () => {
@@ -134,6 +150,29 @@ await step('advanced options are disabled with a reason', async () => {
   await btn('Advanced Options').click({ force: true });
   await visible('No engine');
   await shot('advanced_unavailable');
+});
+await step('Back returns to Home, which now offers the draft that was typed', async () => {
+  await btn('Back').click({ force: true });
+  await visible('Recent Songs');
+  await visible('Continue Your Work');
+  await visible('Ya Rabbi');
+  await shot('home_with_draft');
+});
+await step('Library, My Voice, Activity and Profile say what is true with no backend', async () => {
+  await nav('Library');
+  await visible('isn’t connected to a DeenVoice service');
+  await nav('My Voice');
+  await visible('You have no saved voices yet');
+  await nav('Home');
+  await btn('Activity').click({ force: true });
+  await visible('once this build is connected');
+  await btn('Back').click({ force: true });
+  await visible('Recent Songs');
+  await btn('Profile').click({ force: true });
+  await visible('Not signed in');
+  await visible('so there is no account');
+  await gone('Delete account');
+  await shot('profile_unconnected');
 });
 
 console.log(JSON.stringify({ pageErrors: errors }, null, 0));

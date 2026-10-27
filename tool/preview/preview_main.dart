@@ -10,6 +10,7 @@
 //   cp -r test/fixtures/avatars build/web_preview/preview_avatars
 import 'package:deenvoice/app/app.dart';
 import 'package:deenvoice/application/providers.dart';
+import 'package:deenvoice/presentation/create_song/create_song_screen.dart';
 import 'package:deenvoice/presentation/create_song/widgets/voice_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,7 +38,9 @@ void main() {
           ),
         ),
       ],
-      child: const DeenVoiceApp(),
+      // This entry point renders the Create Song reference, so it opens that
+      // screen directly rather than going through the launch flow.
+      child: const DeenVoiceApp(home: CreateSongScreen()),
     ),
   );
 }

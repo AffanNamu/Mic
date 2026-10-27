@@ -12,7 +12,7 @@ see "Production gaps" for what must change before real traffic.
 ```sh
 cd backend
 npm ci
-npm test            # 173 tests, ~30 s
+npm test            # 189 tests, ~35 s
 npm run typecheck
 cp .env.example .env   # fill in; there are no default secrets
 set -a; . ./.env; set +a
@@ -34,6 +34,7 @@ every endpoint says so. `PROVIDER=mureka` needs `MUREKA_API_KEY`.
 | `src/provider/` | `MusicProvider` port, `UnconfiguredProvider`, `MurekaProvider` |
 | `src/blobstore.ts` | Encrypted private file storage behind a small interface |
 | `src/songs.ts` | Library, signed audio links |
+| `src/account.ts` | Account deletion |
 | `src/metrics.ts` | Operator metrics: completion, latency, cost per successful song |
 | `migrations/` | Append-only SQL migrations with checksum guard |
 | `scripts/` | `mureka-probe.mjs`, `live-poc.ts`, `summarize-listening.ts` |
@@ -48,6 +49,7 @@ every endpoint says so. `PROVIDER=mureka` needs `MUREKA_API_KEY`.
 | `POST /v1/auth/register`, `/v1/auth/login` (no auth) | Rate-limited; same error for wrong password and unknown email |
 | `POST /v1/auth/logout` | Revokes the session |
 | `GET /v1/me`, `/v1/credits`, `/v1/credits/transactions` | Balance is `{available, held}` |
+| `DELETE /v1/me` | Body `{password}`. `403 password_incorrect` (not 401, which the app treats as a ended session), `409 account_busy` while a song is being made, `429` after five tries a minute. See "Deletion" below |
 | `GET /v1/generation/capabilities` | What the engine verifiably supports, and whether it is available now |
 | `GET /v1/generation/quote` | Credits and the provider's expected cost |
 | `POST /v1/generation/jobs` | Idempotent (`idempotencyKey`). `202` new, `200` duplicate, `402` no credits, `422` unsupported |
@@ -103,17 +105,27 @@ queued ──→ cancelled                                         (credits rele
 - **Consent**: the server owns the wording; the app displays it verbatim and the server
   stores the version, its SHA-256, time, IP and user-agent. Audio is refused until consent
   is recorded.
-- **Deletion**: removes the stored recording and, if asked, the songs made with the voice
+- **Account deletion** (`DELETE /v1/me`): re-authenticates with the password, refuses while a song is
+  being made, then deletes every voice recording (and asks the provider to), every song and its audio,
+  the lyrics and titles in jobs, the sessions, the email and the password hash. The user row stays as an
+  anonymous tombstone (`deleted-<id>@deleted.invalid`, no hash) because the credit ledger and audit log
+  point at its id, and consent records stay without the IP address, user agent or speaker's name. The
+  response says what was removed, what is kept, and what the provider may still hold. Every step is safe
+  to repeat if it was interrupted. A scan of the whole database after deletion (it looks for the email,
+  names, lyrics, titles, IP and user agent) is part of the test suite; it found, and now guards against, a
+  copy of the voice's display name kept on songs.
+- **Deletion** (of one voice): removes the stored recording and, if asked, the songs made with the voice
   (text wiped, audio removed). A tombstone and the consent record are kept for
   accountability. It states plainly what the provider keeps (Mureka has no deletion API we
   could find, so `providerDeletion` is `unsupported` and the user is told).
 
 ## What is verified and what is not
 
-Verified by the test suite (173 backend tests) with a labelled **test double** and a
+Verified by the test suite (189 backend tests) with a labelled **test double** and a
 local mock HTTP server: all of the above behaviour, including failures, empty responses,
 timeouts, duplicate submissions, expired credentials, insufficient credits, crash
-recovery, secret non-leakage. Twenty deliberate breakages of the source were each caught.
+recovery, secret non-leakage, account deletion (and that nothing personal is left). Twenty deliberate
+breakages of the original source and fifteen of the account-deletion code were each caught.
 
 **Not verified against any real provider**: the Mureka request/response field names and
 status values (written without being able to reach the API), the vocal-cloning operation

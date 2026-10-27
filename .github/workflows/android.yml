@@ -9,6 +9,7 @@ name: Android release build
 #
 # Secrets:    KEYSTORE_B64 (base64 of the .jks/.keystore), STORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
 # Variables:  API_BASE_URL (public https URL of the DeenVoice backend; not a secret)
+#             TERMS_URL, PRIVACY_URL (public pages; the app links to them only when both are set)
 
 on:
   push:
@@ -46,6 +47,8 @@ jobs:
     env:
       FLUTTER_VERSION: '3.47.8'
       API_BASE_URL: ${{ vars.API_BASE_URL }}
+      TERMS_URL: ${{ vars.TERMS_URL }}
+      PRIVACY_URL: ${{ vars.PRIVACY_URL }}
       # 'true' only when a keystore secret exists (not available to fork pull requests).
       HAVE_KEYSTORE: ${{ secrets.KEYSTORE_B64 != '' }}
     steps:
@@ -106,6 +109,12 @@ jobs:
           set -euo pipefail
           args=(--release --build-number="${{ github.run_number }}")
           [ -z "${API_BASE_URL:-}" ] || args+=("--dart-define=API_BASE_URL=${API_BASE_URL}")
+          # Terms and Privacy links appear in the app only when both are set.
+          if [ -n "${TERMS_URL:-}" ] && [ -n "${PRIVACY_URL:-}" ]; then
+            args+=("--dart-define=TERMS_URL=${TERMS_URL}" "--dart-define=PRIVACY_URL=${PRIVACY_URL}")
+          else
+            echo "::warning::vars.TERMS_URL and vars.PRIVACY_URL are not both set: the app will say its Terms and Privacy Policy are not published."
+          fi
           flutter build apk "${args[@]}"
 
       - name: Verify APK signature
@@ -132,6 +141,12 @@ jobs:
           set -euo pipefail
           args=(--release --build-number="${{ github.run_number }}")
           [ -z "${API_BASE_URL:-}" ] || args+=("--dart-define=API_BASE_URL=${API_BASE_URL}")
+          # Terms and Privacy links appear in the app only when both are set.
+          if [ -n "${TERMS_URL:-}" ] && [ -n "${PRIVACY_URL:-}" ]; then
+            args+=("--dart-define=TERMS_URL=${TERMS_URL}" "--dart-define=PRIVACY_URL=${PRIVACY_URL}")
+          else
+            echo "::warning::vars.TERMS_URL and vars.PRIVACY_URL are not both set: the app will say its Terms and Privacy Policy are not published."
+          fi
           flutter build appbundle "${args[@]}"
 
       - name: Verify AAB signature

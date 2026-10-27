@@ -10,6 +10,7 @@ import '../../application/session_controller.dart';
 import '../../core/theme/deen_theme.dart';
 import '../../core/widgets/brand.dart';
 import '../../domain/failures.dart';
+import '../shared/dialogs.dart';
 import '../shared/language_sheet.dart';
 
 /// The signed-out screen: the DeenVoice welcome, and email sign-in or account
@@ -99,70 +100,76 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     final safeTop = MediaQuery.paddingOf(context).top;
     final insets = MediaQuery.viewInsetsOf(context).bottom;
 
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      backgroundColor: DeenColors.background,
-      body: Stack(
-        children: [
-          const Positioned.fill(child: _Ground()),
-          Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: _maxWidth),
-              child: SingleChildScrollView(
-                padding: EdgeInsets.only(bottom: insets),
-                child: Column(
-                  children: [
-                    // The wordmark sits over the foot of the artwork, as in the
-                    // reference: the art paints past the space it takes.
-                    Align(
-                      alignment: Alignment.topCenter,
-                      heightFactor: (heroHeight - 2) / heroHeight,
-                      child: SizedBox(
-                        height: heroHeight,
-                        child: _Hero(safeTop: safeTop, width: width),
+    return PopScope(
+      canPop: _mode == _Mode.options,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _showOptions();
+      },
+      child: Scaffold(
+        resizeToAvoidBottomInset: false,
+        backgroundColor: DeenColors.background,
+        body: Stack(
+          children: [
+            const Positioned.fill(child: _Ground()),
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: _maxWidth),
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.only(bottom: insets),
+                  child: Column(
+                    children: [
+                      // The wordmark sits over the foot of the artwork, as in the
+                      // reference: the art paints past the space it takes.
+                      Align(
+                        alignment: Alignment.topCenter,
+                        heightFactor: (heroHeight - 2) / heroHeight,
+                        child: SizedBox(
+                          height: heroHeight,
+                          child: _Hero(safeTop: safeTop, width: width),
+                        ),
                       ),
-                    ),
-                    Semantics(
-                      header: true,
-                      child: const DeenWordmark(fontSize: 41),
-                    ),
-                    const SizedBox(height: 3),
-                    ExcludeSemantics(
-                      child: Text(
-                        'AI NASHEEDS FOR A BRIGHTER UMMAH',
-                        style: DeenText.taglineLarge,
-                        textAlign: TextAlign.center,
+                      Semantics(
+                        header: true,
+                        child: const DeenWordmark(fontSize: 41),
                       ),
-                    ),
-                    const SizedBox(height: 28),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 15),
-                      child: _ArchCard(
-                        child: _mode == _Mode.options
-                            ? _Options(onEmail: _showEmail)
-                            : _EmailForm(
-                                email: _email,
-                                password: _password,
-                                creating: _creating,
-                                busy: _busy,
-                                error: _error,
-                                onSubmit: _submit,
-                                onToggle: () => setState(() {
-                                  _creating = !_creating;
-                                  _error = null;
-                                }),
-                                onBack: _showOptions,
-                              ),
+                      const SizedBox(height: 3),
+                      ExcludeSemantics(
+                        child: Text(
+                          'AI NASHEEDS FOR A BRIGHTER UMMAH',
+                          style: DeenText.taglineLarge,
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 28),
-                  ],
+                      const SizedBox(height: 28),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 15),
+                        child: _ArchCard(
+                          child: _mode == _Mode.options
+                              ? _Options(onEmail: _showEmail)
+                              : _EmailForm(
+                                  email: _email,
+                                  password: _password,
+                                  creating: _creating,
+                                  busy: _busy,
+                                  error: _error,
+                                  onSubmit: _submit,
+                                  onToggle: () => setState(() {
+                                    _creating = !_creating;
+                                    _error = null;
+                                  }),
+                                  onBack: _showOptions,
+                                ),
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -705,7 +712,15 @@ class _EmailForm extends StatelessWidget {
               child: Text(error!, style: DeenText.error),
             ),
           ],
-          const SizedBox(height: 16),
+          if (!creating)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: busy ? null : () => _showForgotPassword(context),
+                child: const Text('Forgot password?'),
+              ),
+            ),
+          const SizedBox(height: 8),
           SizedBox(
             height: 46,
             child: FilledButton(
@@ -732,4 +747,17 @@ class _EmailForm extends StatelessWidget {
       ),
     );
   }
+}
+
+/// There is no password reset: the service cannot send email yet. Say so,
+/// rather than offering a link that leads nowhere.
+void _showForgotPassword(BuildContext context) {
+  showInfoDialog(
+    context,
+    title: 'Password reset isn’t available yet',
+    message:
+        'DeenVoice can’t send email yet, so a reset link can’t be sent. If you '
+        'can’t sign in, you can create a new account with a different email '
+        'address. Songs and voices in the old account can’t be moved over.',
+  );
 }

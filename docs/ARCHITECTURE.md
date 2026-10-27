@@ -130,3 +130,36 @@ placeholder still sits about 3 pt higher on web than on the mobile engine.
   so a song made by a test double says so.
 - **Playback**: the player asks the backend for a signed 5-minute link and plays it; the player
   sits behind `AudioPlayerPort` so screens are tested without a device.
+
+## Launch flow, shell and on-device state
+
+```
+DeenVoiceApp ── _SessionGuard (above the navigator) ── MaterialApp ── _Root
+_Root:  onboarding not seen            → OnboardingScreen
+        no backend (API_BASE_URL empty) → AppShell            (no account exists)
+        backend, nobody signed in       → WelcomeScreen
+        backend, signed in              → AppShell
+AppShell: Home | My Voice | Library behind a bottom bar; Create and + push CreateSongScreen
+```
+
+- **One tab is built at a time** (no `IndexedStack`). A Riverpod 3 listener under a covered route is
+  paused, and a provider invalidated meanwhile is flushed when the route is revealed, which asserts
+  in debug if it happens during a build. Building only the visible tab avoids the situation; the
+  widget tests pop back from Create, Manage Voices and the recorder to check.
+- **The session guard** closes every open screen when the signed-in user is signed out, however that
+  happened (sign-out, the server ending the session, account deletion). It lives above the navigator
+  because a screen that is covered stops listening. Without it a screen such as Create would stay on
+  top of the welcome screen.
+- **Job polling lives in the shell**, not in a tab, so the bell and the lists stay current wherever
+  the user is.
+- **On-device state** sits behind three small ports in `domain/local/` with `shared_preferences`
+  implementations in `data/local/` and in-memory ones for tests: whether the introduction was seen,
+  the song draft, and when Activity was last opened (per account). The draft is stored with its
+  owner's id and is only restored for that owner; a draft that belongs to someone else, or that is found
+  while nobody is signed in, is erased rather than shown. It is saved 0.6 s after the last edit (a crash in
+  that window loses at most that edit). Sign-out and account deletion erase all of it.
+- **Widgets read providers; they do not call services.** The bell count is a derived provider
+  (`unseenActivityProvider`) over the server's job list and the last-seen time.
+- **Truthful art.** `tool/extract_art.py` cuts the artwork out of the references; where the app draws
+  an element itself (status bar, language pill, app icon, Popular badge, Watch Demo, a song card's
+  play button and title) the pixels under it were filled in by diffusion. See `assets/README.md`.
