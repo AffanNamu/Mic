@@ -1,0 +1,122 @@
+name: CI
+
+# Fast checks on every push and pull request: formatting, analysis and tests for the
+# Flutter app, type-check and tests for the backend, and a release web build to prove
+# the app still compiles. The browser journey (real browser against a local backend)
+# runs on main and on demand because it is slower.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: '3.47.8'
+
+jobs:
+  flutter:
+    name: Flutter app
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Format
+        run: dart format --output=none --set-exit-if-changed lib test tool
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      - name: Release web build (compile check)
+        run: flutter build web --release --no-web-resources-cdn
+
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node 22.18+ runs TypeScript directly (type stripping); the backend has no build step.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  browser-journey:
+    name: Browser journey (test-double provider)
+    # Drives the web build in Chromium against a real local backend whose music provider
+    # is the labelled TEST DOUBLE (a synthetic tone). It proves the app/API/job/storage/
+    # playback wiring, not any AI provider.
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    needs: [flutter, backend]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@1.63.0
+          npx playwright install --with-deps chromium
+
+      - run: flutter pub get
+
+      - name: Build web against the local backend
+        run: |
+          flutter build web --release --no-web-resources-cdn \
+            --dart-define=API_BASE_URL=http://127.0.0.1:18080 -o build/web_e2e
+
+      - name: Run the journey
+        run: node tool/web_e2e_backend.mjs build/web_e2e e2e-output
+
+      - name: Upload screenshots and results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-journey
+          path: e2e-output
+          if-no-files-found: warn
+          retention-days: 14

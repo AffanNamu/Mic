@@ -1,0 +1,225 @@
+name: iOS build
+
+# Without signing secrets: compiles the release app (no code signing) as a build check.
+# With signing secrets: produces a signed App Store IPA. Publishing to TestFlight is
+# explicit (run the workflow manually and tick "upload_to_testflight"); a push to main
+# never uploads by itself.
+#
+# Secrets (signing):  IOS_DIST_CERT_P12_B64, IOS_DIST_CERT_PASSWORD, IOS_PROVISION_PROFILE_B64, KEYCHAIN_PASSWORD
+# Secrets (upload):   ASC_API_KEY_ID, ASC_API_ISSUER_ID, ASC_API_KEY_P8_B64
+# Variables:          API_BASE_URL (public https URL of the DeenVoice backend; not a secret)
+#
+# The team ID and the provisioning profile name are read from the profile itself, so they
+# are not separate secrets. The profile's App ID must match BUNDLE_ID below (and the
+# bundle identifier in ios/Runner.xcodeproj).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lib/**'
+      - 'ios/**'
+      - 'assets/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/ios.yml'
+  workflow_dispatch:
+    inputs:
+      upload_to_testflight:
+        description: 'Upload the signed IPA to App Store Connect (TestFlight)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # Apple now rejects uploads built with an older SDK than the current Xcode major, so
+    # this uses the same runner image as the eSportlyic iOS workflow. Check the runner
+    # label and Xcode version if uploads are refused for the SDK.
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      FLUTTER_VERSION: '3.47.8'
+      BUNDLE_ID: app.deenvoice.deenvoice
+      API_BASE_URL: ${{ vars.API_BASE_URL }}
+      HAVE_SIGNING: ${{ secrets.IOS_DIST_CERT_P12_B64 != '' && secrets.IOS_DIST_CERT_PASSWORD != '' && secrets.IOS_PROVISION_PROFILE_B64 != '' && secrets.KEYCHAIN_PASSWORD != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Check build inputs
+        run: |
+          set -euo pipefail
+          if [ "${HAVE_SIGNING}" = "true" ]; then
+            [ -n "${API_BASE_URL:-}" ] || { echo "::error::A signed build needs vars.API_BASE_URL (the backend URL); refusing to ship an app that is not connected."; exit 1; }
+            case "${API_BASE_URL}" in
+              https://*) ;;
+              *) echo "::error::vars.API_BASE_URL must be https:// for a signed build (App Transport Security)."; exit 1 ;;
+            esac
+          else
+            echo "::notice::No signing secrets: building without code signing as a compile check only."
+          fi
+          [ -n "${API_BASE_URL:-}" ] || echo "::warning::vars.API_BASE_URL is not set: the app will say it is not connected."
+
+      - run: flutter pub get
+
+      # ───────────── compile check (no signing material available)
+      - name: Build release app without code signing
+        if: env.HAVE_SIGNING != 'true'
+        run: |
+          set -euo pipefail
+          args=(--release --no-codesign --build-number="${{ github.run_number }}")
+          [ -z "${API_BASE_URL:-}" ] || args+=("--dart-define=API_BASE_URL=${API_BASE_URL}")
+          flutter build ios "${args[@]}"
+          test -d build/ios/iphoneos/Runner.app
+
+      # ───────────── signed build
+      - name: Install certificate and provisioning profile
+        if: env.HAVE_SIGNING == 'true'
+        env:
+          IOS_DIST_CERT_P12_B64: ${{ secrets.IOS_DIST_CERT_P12_B64 }}
+          IOS_DIST_CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+          IOS_PROVISION_PROFILE_B64: ${{ secrets.IOS_PROVISION_PROFILE_B64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          cert="${RUNNER_TEMP}/dist_cert.p12"
+          profile="${RUNNER_TEMP}/profile.mobileprovision"
+          keychain="${RUNNER_TEMP}/ci-signing.keychain-db"
+
+          printf '%s' "${IOS_DIST_CERT_P12_B64}" | tr -d '[:space:]' | base64 --decode > "${cert}"
+          printf '%s' "${IOS_PROVISION_PROFILE_B64}" | tr -d '[:space:]' | base64 --decode > "${profile}"
+
+          security create-keychain -p "${KEYCHAIN_PASSWORD}" "${keychain}"
+          security set-keychain-settings -lut 21600 "${keychain}"
+          security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${keychain}"
+          security import "${cert}" -P "${IOS_DIST_CERT_PASSWORD}" -A -t cert -f pkcs12 -k "${keychain}"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${KEYCHAIN_PASSWORD}" "${keychain}"
+          # Put the CI keychain first in the search list, keeping the existing ones.
+          existing=()
+          while IFS= read -r line; do
+            existing+=("$(printf '%s' "${line}" | sed -e 's/^[[:space:]]*"//' -e 's/"$//')")
+          done < <(security list-keychain -d user)
+          security list-keychain -d user -s "${keychain}" "${existing[@]}"
+
+          # Read the facts we need from the profile itself rather than from more secrets.
+          plist="${RUNNER_TEMP}/profile.plist"
+          security cms -D -i "${profile}" > "${plist}"
+          profile_name="$(/usr/libexec/PlistBuddy -c 'Print :Name' "${plist}")"
+          team_id="$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "${plist}")"
+          app_id="$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "${plist}")"
+          if [ "${app_id}" != "${team_id}.${BUNDLE_ID}" ] && [ "${app_id}" != "${team_id}.*" ]; then
+            echo "::error::The provisioning profile is for '${app_id}', not '${team_id}.${BUNDLE_ID}'. Create a profile for ${BUNDLE_ID} or change the bundle identifier in the Xcode project."
+            exit 1
+          fi
+
+          uuid="$(/usr/libexec/PlistBuddy -c 'Print :UUID' "${plist}")"
+          mkdir -p "${HOME}/Library/MobileDevice/Provisioning Profiles"
+          cp "${profile}" "${HOME}/Library/MobileDevice/Provisioning Profiles/${uuid}.mobileprovision"
+
+          {
+            echo "IOS_PROFILE_NAME=${profile_name}"
+            echo "IOS_TEAM_ID=${team_id}"
+            echo "IOS_PROFILE_PATH=${HOME}/Library/MobileDevice/Provisioning Profiles/${uuid}.mobileprovision"
+            echo "IOS_KEYCHAIN_PATH=${keychain}"
+          } >> "${GITHUB_ENV}"
+
+          echo "Installed a distribution identity and the profile '${profile_name}' for team ${team_id}:"
+          security find-identity -v -p codesigning "${keychain}"
+
+      - name: Build signed IPA
+        if: env.HAVE_SIGNING == 'true'
+        run: |
+          set -euo pipefail
+
+          cat > ios/ExportOptions.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>teamID</key><string>${IOS_TEAM_ID}</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict><key>${BUNDLE_ID}</key><string>${IOS_PROFILE_NAME}</string></dict>
+            <key>uploadSymbols</key><true/>
+          </dict>
+          </plist>
+          PLIST
+
+          # A freshly generated Flutter project defaults Release to a *Development*
+          # identity, but this keychain only holds the Distribution identity. These
+          # FLUTTER_XCODE_* overrides take precedence over the project file. The profile
+          # specifier is deliberately NOT set globally: it would be forced onto every
+          # CocoaPods/Swift package target, which reject provisioning profiles.
+          export FLUTTER_XCODE_CODE_SIGN_STYLE=Manual
+          export FLUTTER_XCODE_CODE_SIGN_IDENTITY="Apple Distribution"
+          export FLUTTER_XCODE_DEVELOPMENT_TEAM="${IOS_TEAM_ID}"
+
+          # Manual signing needs an explicit profile on the Runner target only. Anchor on
+          # Runner's own bundle identifier (the ".RunnerTests" ones do not match).
+          BID="${BUNDLE_ID}" PROFILE="${IOS_PROFILE_NAME//\"/\\\"}" perl -pi -e \
+            's/(PRODUCT_BUNDLE_IDENTIFIER = \Q$ENV{BID}\E;)/$1\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "$ENV{PROFILE}";/' \
+            ios/Runner.xcodeproj/project.pbxproj
+          count="$(grep -c 'PROVISIONING_PROFILE_SPECIFIER' ios/Runner.xcodeproj/project.pbxproj || true)"
+          [ "${count}" -ge 1 ] || { echo "::error::Could not set the provisioning profile on the Runner target."; exit 1; }
+
+          args=(--release --build-number="${{ github.run_number }}" --export-options-plist=ios/ExportOptions.plist)
+          [ -z "${API_BASE_URL:-}" ] || args+=("--dart-define=API_BASE_URL=${API_BASE_URL}")
+          flutter build ipa "${args[@]}"
+
+      - name: Verify IPA
+        if: env.HAVE_SIGNING == 'true'
+        run: |
+          set -euo pipefail
+          ipa="$(find build/ios/ipa -name '*.ipa' | head -n1)"
+          [ -n "${ipa}" ] || { echo "::error::No IPA produced"; exit 1; }
+          echo "IPA: ${ipa} ($(du -h "${ipa}" | cut -f1))"
+
+      - name: Upload IPA artifact
+        if: env.HAVE_SIGNING == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-ipa
+          path: build/ios/ipa/*.ipa
+          if-no-files-found: error
+          retention-days: 30
+
+      # ───────────── publishing (explicit, never automatic)
+      - name: Upload to App Store Connect (TestFlight)
+        if: env.HAVE_SIGNING == 'true' && inputs.upload_to_testflight
+        env:
+          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+          ASC_API_KEY_P8_B64: ${{ secrets.ASC_API_KEY_P8_B64 }}
+        run: |
+          set -euo pipefail
+          for v in ASC_API_KEY_ID ASC_API_ISSUER_ID ASC_API_KEY_P8_B64; do
+            [ -n "${!v:-}" ] || { echo "::error::${v} secret is missing; cannot upload."; exit 1; }
+          done
+          # A stray newline from pasting a secret is a common cause of "Failure to authenticate".
+          key_id="$(printf '%s' "${ASC_API_KEY_ID}" | tr -d '[:space:]')"
+          issuer="$(printf '%s' "${ASC_API_ISSUER_ID}" | tr -d '[:space:]')"
+          mkdir -p "${HOME}/private_keys"
+          printf '%s' "${ASC_API_KEY_P8_B64}" | tr -d '[:space:]' | base64 --decode > "${HOME}/private_keys/AuthKey_${key_id}.p8"
+          ipa="$(find build/ios/ipa -name '*.ipa' | head -n1)"
+          xcrun altool --upload-app --type ios --file "${ipa}" --apiKey "${key_id}" --apiIssuer "${issuer}"
+
+      # ───────────── hygiene
+      - name: Remove signing material from the runner
+        if: always() && env.HAVE_SIGNING == 'true'
+        run: |
+          security delete-keychain "${IOS_KEYCHAIN_PATH:-/nonexistent}" 2>/dev/null || true
+          rm -f "${IOS_PROFILE_PATH:-/nonexistent}" "${RUNNER_TEMP}/dist_cert.p12" "${RUNNER_TEMP}/profile.mobileprovision" "${RUNNER_TEMP}/profile.plist"
+          rm -rf "${HOME}/private_keys"

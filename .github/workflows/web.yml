@@ -1,0 +1,77 @@
+name: Web build
+
+# Builds the release web app against the real backend URL and keeps it as an artifact.
+# It does not deploy: the hosting target is a decision (see docs/CI.md). The backend's
+# CORS_ORIGINS must include the origin the app is served from.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lib/**'
+      - 'web/**'
+      - 'assets/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/web.yml'
+  pull_request:
+    paths:
+      - 'lib/**'
+      - 'web/**'
+      - 'assets/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/web.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      FLUTTER_VERSION: '3.47.8'
+      # A repository *variable* (Settings > Secrets and variables > Actions > Variables).
+      # It is a public URL, not a secret. Provider keys never belong in the app.
+      API_BASE_URL: ${{ vars.API_BASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Build release web
+        run: |
+          set -euo pipefail
+          args=(--release --no-web-resources-cdn)
+          if [ -n "${API_BASE_URL:-}" ]; then
+            args+=("--dart-define=API_BASE_URL=${API_BASE_URL}")
+          else
+            echo "::warning::vars.API_BASE_URL is not set: this build is the unconnected app (every service says it is not connected)."
+          fi
+          flutter build web "${args[@]}"
+
+      - name: Verify output
+        run: |
+          set -euo pipefail
+          test -s build/web/index.html
+          test -s build/web/main.dart.js
+          du -sh build/web
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-release
+          path: build/web
+          if-no-files-found: error
+          retention-days: 30

@@ -1,0 +1,187 @@
+name: Android release build
+
+# Builds a release APK, and a Play Store AAB when a release keystore is configured.
+#
+# Without the KEYSTORE_B64 secret the project's Gradle config falls back to the DEBUG
+# key. That APK is fine for a quick install on a test phone but must never be published,
+# so this workflow only builds the AAB, and only treats the build as a release, when real
+# signing material is present.
+#
+# Secrets:    KEYSTORE_B64 (base64 of the .jks/.keystore), STORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
+# Variables:  API_BASE_URL (public https URL of the DeenVoice backend; not a secret)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lib/**'
+      - 'android/**'
+      - 'assets/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - 'tool/check_16kb_alignment.sh'
+      - '.github/workflows/android.yml'
+  pull_request:
+    paths:
+      - 'lib/**'
+      - 'android/**'
+      - 'assets/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - 'tool/check_16kb_alignment.sh'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      FLUTTER_VERSION: '3.47.8'
+      API_BASE_URL: ${{ vars.API_BASE_URL }}
+      # 'true' only when a keystore secret exists (not available to fork pull requests).
+      HAVE_KEYSTORE: ${{ secrets.KEYSTORE_B64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Check build inputs
+        run: |
+          set -euo pipefail
+          if [ "${HAVE_KEYSTORE}" = "true" ]; then
+            [ -n "${API_BASE_URL:-}" ] || { echo "::error::A signed release needs vars.API_BASE_URL (the backend URL); refusing to ship an app that is not connected."; exit 1; }
+            case "${API_BASE_URL}" in
+              https://*) ;;
+              *) echo "::error::vars.API_BASE_URL must be an https:// URL for a signed release (Android blocks cleartext traffic)."; exit 1 ;;
+            esac
+          else
+            echo "::warning::No KEYSTORE_B64 secret: this APK is signed with the DEBUG key and must not be published. The AAB is skipped."
+          fi
+          [ -n "${API_BASE_URL:-}" ] || echo "::warning::vars.API_BASE_URL is not set: the app will say it is not connected."
+
+      - name: Restore release keystore
+        if: env.HAVE_KEYSTORE == 'true'
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          for v in STORE_PASSWORD KEY_ALIAS; do
+            [ -n "${!v:-}" ] || { echo "::error::${v} secret is missing"; exit 1; }
+          done
+          path="${RUNNER_TEMP}/release.keystore"
+          printf '%s' "${KEYSTORE_B64}" | tr -d '[:space:]' | base64 --decode > "${path}"
+          keytool -list -keystore "${path}" -alias "${KEY_ALIAS}" -storepass "${STORE_PASSWORD}" > /dev/null
+          echo "Keystore restored and the alias exists."
+          # Read by android/app/build.gradle.kts
+          echo "KEYSTORE_PATH=${path}" >> "${GITHUB_ENV}"
+
+      - run: flutter pub get
+
+      - name: Build release APK
+        env:
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          args=(--release --build-number="${{ github.run_number }}")
+          [ -z "${API_BASE_URL:-}" ] || args+=("--dart-define=API_BASE_URL=${API_BASE_URL}")
+          flutter build apk "${args[@]}"
+
+      - name: Verify APK signature
+        run: |
+          set -euo pipefail
+          apk=build/app/outputs/flutter-apk/app-release.apk
+          [ -s "${apk}" ] || { echo "::error::APK not found"; exit 1; }
+          apksigner="$(find "${ANDROID_HOME}/build-tools" -name apksigner | sort -V | tail -n1)"
+          certs="$("${apksigner}" verify --print-certs "${apk}")"
+          echo "${certs}"
+          if [ "${HAVE_KEYSTORE}" = "true" ] && printf '%s' "${certs}" | grep -qi 'Android Debug'; then
+            echo "::error::A release keystore was provided but the APK is signed with the debug key."
+            exit 1
+          fi
+          du -h "${apk}"
+
+      - name: Build release AAB (Play Store)
+        if: env.HAVE_KEYSTORE == 'true'
+        env:
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          args=(--release --build-number="${{ github.run_number }}")
+          [ -z "${API_BASE_URL:-}" ] || args+=("--dart-define=API_BASE_URL=${API_BASE_URL}")
+          flutter build appbundle "${args[@]}"
+
+      - name: Verify AAB signature
+        if: env.HAVE_KEYSTORE == 'true'
+        run: |
+          set -euo pipefail
+          aab=build/app/outputs/bundle/release/app-release.aab
+          [ -s "${aab}" ] || { echo "::error::AAB not found"; exit 1; }
+          certs="$(keytool -printcert -jarfile "${aab}")"
+          printf '%s\n' "${certs}" | grep -E 'Owner:|SHA256:' || true
+          if printf '%s' "${certs}" | grep -qi 'Android Debug'; then
+            echo "::error::The AAB is signed with the debug key."
+            exit 1
+          fi
+          du -h "${aab}"
+
+      # Google Play requires 64-bit native libraries to be 16 KB page aligned (Android 15+).
+      # Warns rather than fails; pass --strict to make it a gate once the plugins comply.
+      - name: Check 16 KB page-size alignment
+        run: |
+          set -euo pipefail
+          if [ -f build/app/outputs/bundle/release/app-release.aab ]; then
+            tool/check_16kb_alignment.sh build/app/outputs/bundle/release/app-release.aab
+          else
+            tool/check_16kb_alignment.sh build/app/outputs/flutter-apk/app-release.apk
+          fi
+
+      - name: Upload release APK
+        if: env.HAVE_KEYSTORE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload debug-signed APK (not publishable)
+        if: env.HAVE_KEYSTORE != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-DEBUG-SIGNED-apk-do-not-publish
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload release AAB (Play Store)
+        if: env.HAVE_KEYSTORE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-aab
+          path: build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 30

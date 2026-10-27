@@ -100,6 +100,11 @@ node tool/web_flow_check.mjs build/web build/renders/flows
 Needs Node with `playwright` and Pillow/NumPy for the Python tool. Results are in
 [docs/VERIFICATION.md](docs/VERIFICATION.md).
 
+## CI/CD
+
+GitHub Actions workflows for tests, Android, iOS and web builds are in `.github/workflows/`;
+setup, required secrets and what is and is not verified are in [docs/CI.md](docs/CI.md).
+
 ## Layout
 
 ```

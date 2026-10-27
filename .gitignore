@@ -53,3 +53,6 @@ backend/data/
 backend/.env
 backend/.env.*
 !backend/.env.example
+
+# Tooling installed on demand (e.g. Playwright for tool/web_e2e_backend.mjs)
+/node_modules/
