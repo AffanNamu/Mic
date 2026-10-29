@@ -4,16 +4,22 @@ Goal (Phase 2 acceptance): **one real authorized voice → one real song from a 
 back in DeenVoice and reopened from the library, with measured latency, cost and quality.
 
 This build environment could not do that (see [../ACCEPTANCE_PHASE2.md](../ACCEPTANCE_PHASE2.md)). This
-runbook is how you do it on a machine that can. Nothing here has been run against a live provider yet.
+runbook is how you do it on a machine that can.
+
+**Where it stands (2026-10-29):** steps 1 and 2 have been run against the live API from the build
+environment (the docs were read and the key was accepted). Step 3 was refused with HTTP 429 "You exceeded your
+current quota" because the account has **no credit**, so nothing after it has run: no song, no Vocal ID, no
+spend. Details and the adapter fixes that came out of it: [../PROVIDER_EVALUATION.md](../PROVIDER_EVALUATION.md)
+("Live contract check"). Transcripts: `docs/poc/transcripts/`.
 
 ## What you need
 
 | Need | Notes |
 | --- | --- |
 | Network access to `api.mureka.ai` and `platform.mureka.ai` | These were denied in the build environment. |
-| A Mureka API account with prepaid balance | Expect about **$5 for the voice + $0.045–$0.15 per song** (rate card, 2026-10-26; confirm in the console). The $10 minimum top-up gives 1 concurrent task. |
+| A Mureka API account with prepaid balance | Expect about **$5 for the voice + $0.045–$0.15 per song** (rate card, 2026-10-26; confirm in the console). The $10 minimum top-up gives 1 concurrent task. **The account used on 2026-10-29 had no credit.** The billing endpoint returns no balance, so the only way to know is the console, or a `429 ... exceeded your current quota` on the first paid call. |
 | One authorized participant | Adult, willing, informed. Written consent **before** anything is uploaded: [consent-record-template.md](consent-record-template.md). |
-| A clean solo vocal sample | 10–15 s, single voice, no music, no reverb, no noise. Mureka's documented range is 5–15 s. WAV preferred. |
+| A clean solo vocal sample | **15–30 s** (the vocal-cloning page; excess is trimmed), single voice, no music, no reverb, no noise. Mureka documents **mp3 and m4a**, under 10 MB. WAV is **not** listed: if you only have WAV, expect the first enrollment to tell you whether it is accepted (a rejection is not billed as far as we know, but that is unconfirmed). |
 | Original lyrics | Written by or for the participant. Never copyrighted lyrics. Keep English first. |
 | Hausa and Arabic lyrics + native listeners | For the language probes. Without native listeners the language result is "unknown", not "works". |
 | Node ≥ 22.18 | `cd backend && npm ci` |
@@ -25,9 +31,12 @@ runbook is how you do it on a machine that can. Nothing here has been run agains
    cd backend
    node scripts/mureka-probe.mjs --discover
    ```
-   Find the *Vocal cloning* operation, read its page, and set `MUREKA_VOCAL_CLONE_PATH`. Check that the
-   multipart field names in `enrollVoice()` (`src/provider/mureka.ts`) match; fix the adapter if not.
-   Record what you found in `docs/PROVIDER_EVALUATION.md`.
+   The *Vocal cloning* operation is `POST /v1/song/vocal-clone`: set `MUREKA_VOCAL_CLONE_PATH=/v1/song/vocal-clone`.
+   Its documented fields (`file` required; `description` optional) match `enrollVoice()` in
+   `src/provider/mureka.ts`. Re-read the page before a run in case it changed, and record anything new in
+   `docs/PROVIDER_EVALUATION.md`.
+   Behind an HTTP proxy, Node's built-in `fetch` ignores `HTTPS_PROXY` unless you set `NODE_USE_ENV_PROXY=1`
+   (Node 22.21 or later); without it the probe reports every page as unreachable (`ENOTFOUND`).
 2. **Check the key without spending.**
    ```bash
    MUREKA_API_KEY=… node scripts/mureka-probe.mjs --billing

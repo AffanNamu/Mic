@@ -49,7 +49,7 @@ Notes).
 | Voice selection | **Real (test double)** | Shows only voices the backend returns. Not-ready and speech-only voices cannot be chosen, with an explanation. Enrolling voices refresh until ready. |
 | Manage Voices | **Real (test double)** | List and delete with confirmation; after deletion the app shows what the provider could *not* remove. Without a backend: empty state. |
 | Add New Voice (upload) | **Real (test double)** | The consent wording is the **server's**, shown verbatim; its version is recorded server-side. "Someone who allowed me" requires the speaker's name. Recording is validated server-side (type, size, 5–15 s). Without a backend: "not connected". |
-| Add New Voice (record in app) | **Real (verified on web only)** | Records 16-bit mono WAV through the `record` package, shows time and a live level, enforces the engine's stated length (5–15 s here; 5–30 s if none is stated), lets you listen back, and refuses a too-short or silent take with the reason. Nothing leaves the device until you choose Use this recording and the consent boxes are ticked. Driven in real Chromium with a **fake microphone** (a tone): captured, accepted by the backend, enrolled. **Not run on an Android or iOS device**; no human voice has been recorded in a browser here. |
+| Add New Voice (record in app) | **Real (verified on web only)** | Records 16-bit mono WAV through the `record` package, shows time and a live level, enforces the engine's stated length (15–30 s for Mureka's documented vocal-cloning range; 5–30 s if none is stated), lets you listen back, and refuses a too-short or silent take with the reason. Nothing leaves the device until you choose Use this recording and the consent boxes are ticked. Driven in real Chromium with a **fake microphone** (a tone): captured, accepted by the backend, enrolled. **Not run on an Android or iOS device**; no human voice has been recorded in a browser here. |
 | Credits balance / credits entry point | **Real (test double)** | Pill, sheet and library show the server's ledger balance. Credits are granted by an operator. Buying credits is **Missing**. |
 | Write with AI | **Boundary** | Sheet, topic input, reviewable suggestion, confirm-before-replace. Today: "The lyrics assistant is not connected in this build yet." |
 | AI Improve | **Boundary** | Review sheet (suggestion vs yours) before anything changes. Same "not connected" today. |
@@ -86,9 +86,9 @@ Notes).
 | Capability | State |
 | --- | --- |
 | Provider research | **Real (evidence-tagged).** [PROVIDER_EVALUATION.md](PROVIDER_EVALUATION.md). Done from search summaries because provider hosts are blocked; every claim is tagged by source quality. |
-| Voice enrollment / cloning provider | **Adapter written, fails closed.** `MurekaProvider.enrollVoice` refuses until `MUREKA_VOCAL_CLONE_PATH` is set from the official reference. Never run against Mureka. |
+| Voice enrollment / cloning provider | **Adapter written, fails closed.** `MurekaProvider.enrollVoice` refuses until `MUREKA_VOCAL_CLONE_PATH` is set (the documented value is `/v1/song/vocal-clone`). The request now follows the official page (`file` only; 15–30 s; mp3/m4a documented, WAV unconfirmed). **Never run:** the Mureka account has no credit, so no Vocal ID exists. |
 | Voice-conditioned singing / full-song provider | **Adapter written, contract unverified.** `POST /v1/song/generate` with `vocal_id` is documented; field names and status values are from memory and must be confirmed with `backend/scripts/mureka-probe.mjs`. Never run against Mureka. |
-| A real voice → real song generation | **Not done.** Blocked: network policy, no API key, no authorized participant. |
+| A real voice → real song generation | **Not done.** Mureka is reachable and the key is valid (2026-10-29), but the account has **no credit** (HTTP 429 "exceeded your current quota" on the first song), so no song and no Vocal ID exist. Also still missing: an authorized participant with signed consent, and native Hausa/Arabic listeners. See [PROVIDER_EVALUATION.md](PROVIDER_EVALUATION.md#live-contract-check-2026-10-29). |
 | Lyrics model | **Missing.** (Write with AI still says "not connected".) |
 | Provider routing, fallback | **Missing.** Deliberately one provider until one flow works. |
 | Cost accounting | **Real (estimates).** Rate-card estimates per job; reconcile with an invoice. |
@@ -99,7 +99,7 @@ Notes).
 
 | Item | State |
 | --- | --- |
-| Backend: auth, database, migrations, encrypted private storage, jobs, ledger, account deletion | **Real** ([BACKEND.md](BACKEND.md)); 189 tests. Single-node SQLite. |
+| Backend: auth, database, migrations, encrypted private storage, jobs, ledger, account deletion | **Real** ([BACKEND.md](BACKEND.md)); 196 tests. Single-node SQLite. |
 | Webhooks, payments | **Missing** |
 | Web build (release) | **Real**; built and driven in Chromium. |
 | Android build | **Compiles on GitHub.** The container has no Android SDK, but `android.yml` built the release APK on `ubuntu-latest` at head `128cfed` (signature verified, 16 KB alignment check passed). It is **debug-signed and not publishable**: there is no release keystore. The release manifest declares `INTERNET` (needed to reach the backend); cleartext `http://` backends need `usesCleartextTraffic` and are for development only. |

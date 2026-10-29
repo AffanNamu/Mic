@@ -201,7 +201,7 @@ describe('enrollment', () => {
     const u = await setup({ provider: new MurekaProvider({ apiKey: 'k-test', baseUrl: 'https://api.mureka.ai' }) as never });
     assert.equal(env.provider.capabilities().voiceConditioning, false);
     const id = (await createVoiceRecord(env, u.token)).json().voice.id as string;
-    await uploadVoice(env, u.token, id);
+    await uploadVoice(env, u.token, id, wav(20)); // Mureka asks for 15-30 s
     await env.drain();
     const v = await voiceOf(u.token, id);
     assert.equal(v.status, 'failed');

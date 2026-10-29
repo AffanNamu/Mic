@@ -30,7 +30,7 @@ songs with AI, including singing in a user's own authorized voice.
   empty data or fail with a clear "not connected" message.
 - Voice upload entry with explicit consent capture, voice management, text
   import, and all pickers/sheets the screen needs.
-- Automated tests for the app (see [docs/VERIFICATION.md](docs/VERIFICATION.md)) and 189 for the
+- Automated tests for the app (see [docs/VERIFICATION.md](docs/VERIFICATION.md)) and 196 for the
   backend, plus real-browser checks.
 
 - **Backend** (`backend/`, [docs/BACKEND.md](docs/BACKEND.md)): auth, consent records, encrypted
@@ -77,7 +77,7 @@ origin).
 ### Backend and full-journey checks
 
 ```sh
-cd backend && npm ci && npm test      # 189 tests
+cd backend && npm ci && npm test      # 196 tests
 cd .. && flutter build web --release --no-web-resources-cdn \
     --dart-define=API_BASE_URL=http://127.0.0.1:18080 -o build/web_e2e
 node tool/web_e2e_backend.mjs build/web_e2e docs/verification/backend_e2e

@@ -68,6 +68,10 @@ describe('capabilities never claim more than is documented or configured', () =>
     assert.equal(c.engineName, 'Mureka');
   });
 
+  it('asks for the sample length on the vocal-clone page (15-30 s), not the older 5-15 s', () => {
+    assert.deepEqual(make().capabilities().voiceSampleSeconds, { min: 15, max: 30 });
+  });
+
   it('experimental languages are allowed for evaluation but never become "documented"', () => {
     const c = make({ experimentalLanguages: ['hausa', 'arabic'], vocalClonePath: '/v1/x' }).capabilities();
     assert.deepEqual(c.languages.sort(), ['arabic', 'english', 'hausa']);
@@ -115,6 +119,51 @@ describe('submitSong', () => {
       for (const [k, v] of Object.entries(expected)) assert.equal((e as unknown as Record<string, unknown>)[k], v, k);
     });
   }
+
+  describe('HTTP 429 means two different things at Mureka (Error codes page; the first form was observed live)', () => {
+    const quota = { error: { message: 'You exceeded your current quota, please check your plan and billing details' }, trace_id: 't' };
+
+    it('"exceeded your current quota" = out of credits: terminal, flagged as funds, never retried', async () => {
+      handler = (_q, res) => json(res, 429, quota);
+      const e = await outcome(make().submitSong(req(), signal()));
+      assert.equal(e.code, 'provider_funds');
+      assert.equal(e.outcome, 'terminal');
+      assert.equal(e.providerFunds, true);
+      assert.equal(e.httpStatus, 429);
+    });
+
+    it('the documented variants and a plain-string error are recognised too', async () => {
+      for (const body of [
+        { error: { message: 'You have run out of credits' } },
+        { error: 'You exceeded your current quota, please check your billing details' },
+      ]) {
+        handler = (_q, res) => json(res, 429, body);
+        const e = await outcome(make().submitSong(req(), signal()));
+        assert.equal(e.code, 'provider_funds', JSON.stringify(body));
+      }
+    });
+
+    it('"rate limit reached" stays a safe-to-retry, not-started refusal, with Retry-After honoured', async () => {
+      handler = (_q, res) => json(res, 429, { error: { message: 'Rate limit reached for requests' } }, { 'retry-after': '3' });
+      const e = await outcome(make().submitSong(req(), signal()));
+      assert.equal(e.code, 'provider_rate_limited');
+      assert.equal(e.outcome, 'not_started');
+      assert.equal(e.providerFunds, false);
+      assert.equal(e.retryAfterMs, 3000);
+    });
+
+    it('a 429 whose body cannot be read is treated as a rate limit, not as being out of credit', async () => {
+      handler = (_q, res) => { res.writeHead(429, { 'content-type': 'text/html' }); res.end('<html>slow down</html>'); };
+      const e = await outcome(make().submitSong(req(), signal()));
+      assert.equal(e.code, 'provider_rate_limited');
+    });
+
+    it('an enormous error body is cut off, not buffered, and the error is still classified', async () => {
+      handler = (_q, res) => { res.writeHead(429, { 'content-type': 'application/json' }); res.end(`{"error":{"message":"${'x'.repeat(2_000_000)}"}}`); };
+      const e = await outcome(make().submitSong(req(), signal()));
+      assert.equal(e.outcome, 'not_started');
+    });
+  });
 
   it('a 2xx with an unreadable body is outcome UNKNOWN (the work may have started)', async () => {
     handler = (_q, res) => { res.writeHead(200, { 'content-type': 'text/html' }); res.end('<html>maintenance</html>'); };
@@ -273,16 +322,25 @@ describe('voice enrollment', () => {
     assert.equal(seen.length, 0);
   });
 
-  it('when an operator configures the path, uploads multipart with auth and returns the id (ASSUMED contract)', async () => {
+  it('uploads multipart to the documented path with ONLY the documented required field, `file` (response shape still unobserved)', async () => {
     handler = (_q, res) => json(res, 200, { vocal_id: 'vocal-abc' });
-    const p = make({ vocalClonePath: '/v1/vocal/clone' });
+    const p = make({ vocalClonePath: '/v1/song/vocal-clone' });
     const out = await p.enrollVoice({ audio: wav(10), mime: 'audio/wav', fileName: 'voice-1' }, signal());
     assert.deepEqual(out, { providerVoiceId: 'vocal-abc', costMicros: 5_000_000 });
     const s = seen[0]!;
-    assert.equal(s.url, '/v1/vocal/clone');
+    assert.equal(s.url, '/v1/song/vocal-clone');
     assert.match(String(s.headers['content-type']), /multipart\/form-data/);
     assert.equal(s.headers.authorization, `Bearer ${KEY}`);
     assert.ok(s.body.includes(wav(10).subarray(0, 12)), 'the audio is in the upload');
+    const text = s.body.toString('latin1');
+    assert.deepEqual([...text.matchAll(/form-data; name="([^"]+)"/g)].map((m) => m[1]), ['file'], 'no undocumented fields such as `purpose`');
+  });
+
+  it('a 429 for being out of credit on enrollment is terminal and flagged as funds', async () => {
+    handler = (_q, res) => json(res, 429, { error: { message: 'You exceeded your current quota' } });
+    const e = await outcome(make({ vocalClonePath: '/v1/song/vocal-clone' }).enrollVoice({ audio: wav(10), mime: 'audio/wav', fileName: 'v' }, signal()));
+    assert.equal(e.providerFunds, true);
+    assert.equal(e.outcome, 'terminal');
   });
 
   it('an enrollment response without an id is outcome UNKNOWN (it may have been billed)', async () => {

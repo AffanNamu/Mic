@@ -48,7 +48,7 @@ describe('live PoC runner, orchestration smoke test against an assumed-contract 
     const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 
     try {
-      const sample = join(dir, 'sample.wav'); writeFileSync(sample, wav(10, { sampleRate: 16000 }));
+      const sample = join(dir, 'sample.wav'); writeFileSync(sample, wav(20, { sampleRate: 16000 }));
       const lyrics = join(dir, 'lyrics.txt'); writeFileSync(lyrics, 'SECRET-LYRIC-LINE original words');
       const out = join(dir, 'results');
       const child = spawn('node', ['--disable-warning=ExperimentalWarning', 'scripts/live-poc.ts',

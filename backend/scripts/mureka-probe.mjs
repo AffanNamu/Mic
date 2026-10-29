@@ -151,6 +151,12 @@ async function generate() {
   console.log(`\nsubmit → HTTP ${sub.res?.status ?? 'network error'}`);
   let body = null;
   try { body = JSON.parse(sub.buf.toString('utf8')); } catch { /* reported below */ }
+  if (sub.res?.status === 429) {
+    const msg = String(body?.error?.message ?? body?.error ?? '');
+    console.log(/quota|credit/i.test(msg)
+      ? '  Mureka answers 429 both for "pace your requests" and for "you have run out of credits". This one says the account is out of credit: top up at platform.mureka.ai, then re-run. Nothing was generated or billed.'
+      : '  429: rate or concurrency limit. Wait and retry; nothing was generated.');
+  }
   check('submit returned 2xx', Boolean(sub.res?.ok), sub.res ? `HTTP ${sub.res.status}` : sub.error);
   const taskId = body && (body.id ?? body.task_id);
   check('submit response has a task id in `id` or `task_id` (adapter assumption)', Boolean(taskId), body ? `keys: ${Object.keys(body).join(', ')}` : 'unparseable');

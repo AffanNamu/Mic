@@ -1,0 +1,18 @@
+[
+  {
+    "label": "billing",
+    "method": "GET",
+    "url": "https://api.mureka.ai/v1/account/billing",
+    "requestHeaders": {
+      "Authorization": "Bearer [redacted]",
+      "Accept": "application/json"
+    },
+    "status": 200,
+    "ms": 463,
+    "responseHeaders": {
+      "content-length": "105",
+      "content-type": "application/json; charset=utf-8"
+    },
+    "responseBody": "{\"account_id\":\"[redacted]\",\"concurrent_request_limit\":1,\"trace_id\":\"24f31af14c0d6fb3e202af2702f8bc42\"}"
+  }
+]

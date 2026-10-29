@@ -4,16 +4,20 @@ import { ProviderError } from './types.ts';
 /**
  * Mureka adapter.
  *
- * CONTRACT STATUS: NOT VERIFIED AGAINST THE LIVE API. The build environment could not reach
- * api.mureka.ai or platform.mureka.ai (blocked by network policy), so nothing here has been run
- * against Mureka. What is known, and from where (docs/PROVIDER_EVALUATION.md):
- *   - Base URL `https://api.mureka.ai`, bearer auth, async generation; song generation at
- *     `POST /v1/song/generate` and polling at `GET /v1/song/query/{task_id}` (official docs, via search).
- *   - `vocal_id` and `prompt` are request parameters (official changelog).
- *   - A "Vocal cloning" operation exists, but its path and fields could NOT be retrieved.
- * Everything else below (request field names `lyrics`/`model`, response fields `id`/`status`/`choices[].url`,
- * the status vocabulary) is from memory of the 2025 documentation and must be confirmed with
- * `scripts/mureka-probe.mjs` before any real use.
+ * CONTRACT STATUS: PARTLY OBSERVED (2026-10-29), NOT YET RUN END TO END. Mureka became reachable and the
+ * account key was accepted; what was and was not learned is recorded in docs/PROVIDER_EVALUATION.md
+ * ("Live contract check"):
+ *   - Observed live: `GET /v1/account/billing` answers 200 with `account_id` and `concurrent_request_limit`
+ *     (no balance field). `POST /v1/song/generate` answered HTTP 429 with
+ *     `{"error":{"message":"You exceeded your current quota, ..."},"trace_id":...}` because the account had
+ *     no credit, so no song has ever been generated and the response/poll shapes below are still unobserved.
+ *   - From the official pages (read, not exercised): song generation `POST /v1/song/generate` answers
+ *     `{id, status: "preparing", model, created_at, trace_id}` and is polled at `GET /v1/song/query/{task_id}`;
+ *     vocal cloning is `POST /v1/song/vocal-clone`, multipart, `file` (required; mp3 or m4a; under 10 MB;
+ *     15-30 seconds) and `description` (optional); HTTP 429 means EITHER "pace your requests" OR "you have
+ *     run out of credits" (told apart by the message); HTTP 403 means an unsupported region.
+ *   - Not documented anywhere we could read: the poll response's result fields (`choices[].url` is assumed),
+ *     whether a WAV sample is accepted (only mp3 and m4a are listed), and any Hausa or Arabic support.
  *
  * Because of that the adapter FAILS CLOSED: enrollment is refused until `vocalClonePath` is set,
  * unknown response shapes are errors (never guessed), and nothing is reported as supported that the
@@ -38,6 +42,9 @@ const MAX_JSON_BYTES = 1024 * 1024;
 const SUCCESS = new Set(['succeeded', 'success', 'completed']);
 const FAILURE = new Set(['failed', 'timeouted', 'timed_out', 'cancelled', 'canceled', 'error']);
 const RUNNING = new Set(['preparing', 'queued', 'running', 'streaming', 'pending', 'processing']);
+
+/** The message Mureka sends with a 429 when the account is out of credit ("You exceeded your current quota ..."). */
+const OUT_OF_CREDIT = /exceeded your current quota|run out of credits|insufficient (balance|credits?)/i;
 
 type Json = Record<string, unknown>;
 
@@ -64,7 +71,7 @@ export class MurekaProvider implements MusicProvider {
       languages: [...new Set([...documented, ...this.o.experimentalLanguages])],
       voiceConditioning: this.o.vocalClonePath !== null,
       advancedOptionIds: [],
-      voiceSampleSeconds: { min: 5, max: 15 },
+      voiceSampleSeconds: { min: 15, max: 30 }, // vocal-clone page: 15-30 s, excess trimmed
       estimatedSongCostMicros: this.o.songCostMicros,
       estimatedEnrollCostMicros: this.o.enrollCostMicros,
     };
@@ -78,9 +85,9 @@ export class MurekaProvider implements MusicProvider {
         'Mureka vocal-cloning is not configured: set MUREKA_VOCAL_CLONE_PATH from the official API reference (see docs/PROVIDER_EVALUATION.md).',
         { outcome: 'terminal' });
     }
-    // UNVERIFIED: multipart field names. The upload operation documents a 5-15 s `voice` sample.
+    // `POST /v1/song/vocal-clone` documents one required multipart field, `file` (mp3 or m4a, under 10 MB,
+    // 15-30 s). Whether a WAV is accepted is NOT documented: send what we have and let the provider say.
     const form = new FormData();
-    form.set('purpose', 'voice');
     form.set('file', new Blob([new Uint8Array(input.audio)], { type: input.mime }), input.fileName);
     const body = await this.request('POST', this.o.vocalClonePath, { body: form }, signal, 'write');
     const id = pickString(body, ['vocal_id', 'id']);
@@ -170,7 +177,7 @@ export class MurekaProvider implements MusicProvider {
     } catch (err) {
       throw networkError(err, kind);
     }
-    if (!res.ok) throw this.httpError(res.status, res.headers, kind);
+    if (!res.ok) throw this.httpError(res.status, res.headers, kind, await readErrorMessage(res));
 
     // Read first so a size error is reported as such; only the parse failure is a "bad shape".
     // An oversized 2xx to a write may still mean work started, so it is unknown there.
@@ -188,7 +195,7 @@ export class MurekaProvider implements MusicProvider {
     return parsed as Json;
   }
 
-  private httpError(status: number, headers: Headers, kind: 'read' | 'write'): ProviderError {
+  private httpError(status: number, headers: Headers, kind: 'read' | 'write', message = ''): ProviderError {
     const retryAfter = Number(headers.get('retry-after'));
     const retryAfterMs = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : undefined;
     const base = { httpStatus: status, ...(retryAfterMs !== undefined ? { retryAfterMs } : {}) };
@@ -196,6 +203,11 @@ export class MurekaProvider implements MusicProvider {
       return new ProviderError('provider_credentials', 'The provider rejected our credentials.', { ...base, outcome: 'terminal', credentialsInvalid: true });
     }
     if (status === 402) {
+      return new ProviderError('provider_funds', 'The provider account has no balance.', { ...base, outcome: 'terminal', providerFunds: true });
+    }
+    if (status === 429 && OUT_OF_CREDIT.test(message)) {
+      // Mureka reuses 429 for "you have run out of credits" (documented under Error codes, and observed on
+      // an account with no balance). Retrying cannot help and would only keep the job queued, so it is terminal.
       return new ProviderError('provider_funds', 'The provider account has no balance.', { ...base, outcome: 'terminal', providerFunds: true });
     }
     if (status === 429) {
@@ -208,6 +220,17 @@ export class MurekaProvider implements MusicProvider {
     // 5xx: for a write we cannot know whether the work began; for a read, asking again is harmless.
     return new ProviderError('provider_server_error', `The provider failed (${status}).`, { ...base, outcome: kind === 'write' ? 'unknown' : 'not_started' });
   }
+}
+
+/** The provider's own words for a failed request, bounded and only used to classify it; never shown or logged. */
+async function readErrorMessage(res: Response): Promise<string> {
+  try {
+    const parsed: unknown = JSON.parse((await readLimited(res, 4096, 'terminal')).toString('utf8'));
+    const err = parsed && typeof parsed === 'object' ? (parsed as Json)['error'] : undefined;
+    if (typeof err === 'string') return err;
+    if (err && typeof err === 'object' && typeof (err as Json)['message'] === 'string') return (err as Json)['message'] as string;
+  } catch { /* an unreadable error body is simply not classified */ }
+  return '';
 }
 
 function pickString(obj: Json, keys: string[]): string | null {

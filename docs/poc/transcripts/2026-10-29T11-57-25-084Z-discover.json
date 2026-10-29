@@ -1,0 +1,362 @@
+[
+  {
+    "label": "docs https://platform.mureka.ai/docs/en/quickstart.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/en/quickstart.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 610,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/en/changelog.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/en/changelog.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 147,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/en/faq.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/en/faq.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 99,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/post-v1-song-generate.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/post-v1-song-generate.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 197,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/post-v1-files-upload.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/post-v1-files-upload.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 104,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/post-v1-lyrics-generate.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/post-v1-lyrics-generate.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 171,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/post-v1-lyrics-extend.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/post-v1-lyrics-extend.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 178,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/post-v1-song-easy-generate.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/post-v1-song-easy-generate.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 85,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/post-v1-soundtrack-generate.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/post-v1-soundtrack-generate.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 106,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/get-v1-song-query-%7Btask_id%7D.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/get-v1-song-query-%7Btask_id%7D.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 173,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/post-v1-song-vocal-clone.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/post-v1-song-vocal-clone.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 95,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/post-v1-song-extend.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/post-v1-song-extend.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 99,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/post-v1-song-recognize.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/post-v1-song-recognize.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 168,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/post-v1-song-describe.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/post-v1-song-describe.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 92,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/post-v1-song-transcribe.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/post-v1-song-transcribe.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 92,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/post-v1-song-stem.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/post-v1-song-stem.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 83,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/post-v1-track-generate.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/post-v1-track-generate.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 154,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/post-v1-song-region-edit.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/post-v1-song-region-edit.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 78,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/post-v1-song-remix.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/post-v1-song-remix.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 247,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/post-v1-video-generate.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/post-v1-video-generate.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 104,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/get-v1-video-query-%7Btask_id%7D.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/get-v1-video-query-%7Btask_id%7D.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 130,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/post-v1-lyrics-video-generate.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/post-v1-lyrics-video-generate.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 171,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/post-v1-instrumental-generate.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/post-v1-instrumental-generate.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 80,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/get-v1-instrumental-query-%7Btask_id%7D.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/get-v1-instrumental-query-%7Btask_id%7D.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 83,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/post-v1-uploads-create.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/post-v1-uploads-create.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 170,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/post-v1-uploads-add.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/post-v1-uploads-add.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 81,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/post-v1-uploads-complete.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/post-v1-uploads-complete.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 80,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/post-v1-tts-generate.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/post-v1-tts-generate.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 80,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/post-v1-tts-podcast.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/post-v1-tts-podcast.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 154,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  },
+  {
+    "label": "docs https://platform.mureka.ai/docs/api/operations/get-v1-account-billing.html",
+    "method": "GET",
+    "url": "https://platform.mureka.ai/docs/api/operations/get-v1-account-billing.html",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 90,
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    },
+    "note": "page body omitted (public documentation HTML)"
+  }
+]

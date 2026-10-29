@@ -137,12 +137,48 @@ Not recommended for the proof of concept: Suno (no API), MiniMax (closed to new
 users), Lyria and ElevenLabs Music (no evidence of custom-voice singing), Kits
 (conversion only, and default training-data use).
 
+## Live contract check (2026-10-29)
+
+Mureka became reachable from the build environment (the host allow-list was changed) and an API key was
+supplied as an environment secret. No money was spent: the one call that could have been billed was refused for lack of credit.
+Transcripts with the Authorization header removed are in `docs/poc/transcripts/`.
+
+| Step | Result |
+| --- | --- |
+| `--discover` (public docs, no key) | 28 operation pages read. The vocal-cloning operation exists at **`POST /v1/song/vocal-clone`**. |
+| `--billing` (key check, free) | **HTTP 200** `{"account_id", "concurrent_request_limit": 1, "trace_id"}`. The key is valid. There is **no balance field**, so a balance cannot be read from the API. |
+| `POST /v1/song/generate`, one short English song, no voice | **HTTP 429** `{"error":{"message":"You exceeded your current quota, please check your plan and billing details"},"trace_id":...}`. The account has **no credit**, so no song was generated and no money was spent. |
+
+What this settles, and what it does not:
+- **Settled:** the host, the bearer auth, and the key work. HTTP 429 is how Mureka says the account is out of credit
+  (the official *Error codes* page lists two different 429s: "rate limit reached" and "you exceeded your current
+  quota ... you have run out of credits").
+- **Not settled:** the song-generation response, the poll response and its status values, the result URL field, the
+  vocal-clone response, audio quality, latency, real cost, and any Hausa or Arabic behaviour. **No song and no Vocal ID
+  has been produced.** The Phase 2 verdict (not accepted) is unchanged.
+
+Differences between the adapter and the official pages, and what was changed:
+
+| Topic | Before | Official page | Change |
+| --- | --- | --- | --- |
+| HTTP 429 | always "rate limited, retry" | two meanings; "exceeded your current quota" = out of credits | The adapter reads the error message. Out of credit is now **terminal and flagged as a funds problem** (the job fails, its reserved credits are released, the provider is marked unavailable) instead of being retried; "rate limit" is still retried. Found by the live call; tested, mutation-checked. |
+| Vocal-clone path | unknown | `POST /v1/song/vocal-clone` | Documented in `.env.example` and the runbook. Still **off until an operator sets `MUREKA_VOCAL_CLONE_PATH`**, because it has never been run. |
+| Vocal-clone fields | `purpose=voice` + `file` | `file` (required), `description` (optional, up to 1024 characters) | `purpose` removed. |
+| Sample length | 5-15 s | **15-30 s** (excess trimmed) on the vocal-clone page; the generic file-upload page says 5-15 s for its `voice` purpose | Set to 15-30 s. The app asks for what the connected engine states, so recording now asks for 15-30 s. |
+| Sample format | WAV (assumed) | **mp3, m4a**, under 10 MB. WAV is not listed. | **Not changed, and unresolved.** The app records WAV. Whether Mureka accepts it is unknown; if it does not, the server must transcode (ffmpeg, or an encoder) or the app must record AAC. Settle this with a free-of-charge probe once there is credit. |
+| HTTP 403 | "credentials rejected" | "accessing from an unsupported region" | **Not changed.** A 403 is still reported as a credentials problem; the user-facing reason would be wrong for a region block. |
+| Languages | English only | Chinese, English, Japanese, Korean, Portuguese, Spanish, German, Italian, French, Russian (FAQ, changelog) | Unchanged: no Hausa, no Arabic. |
+| Concurrency | assumed 1 on the minimum top-up | `concurrent_request_limit: 1` on this account | Matches. |
+
+Other facts from the FAQ: API credits are separate from website membership credits; credits are valid for 12 months
+from the last top-up and are non-refundable; downloading songs is free; the multitrack (stems) feature costs extra.
+
 ## Still unverified, to check before and during the proof of concept
 
 | Item | How |
 | --- | --- |
-| Exact endpoint, request and response of Vocal cloning; error codes; whether a verification step exists | Read the official operation page; run `backend/scripts/mureka-probe.mjs` with a key |
-| Status values and result fields of `song/query` | Same probe |
+| Response of Vocal cloning; whether a WAV sample is accepted (only mp3 and m4a are documented); whether a verification step exists | Needs credit. The request fields and path are now read from the official page (see "Live contract check") |
+| Status values and result fields of `song/query` | Needs credit: the probe's `--generate` step. Not yet observed |
 | Whether `vocal_id` songs in English meet the quality bar | Listening test (see `docs/poc/`) |
 | Arabic and Hausa behaviour | Listening test with native speakers |
 | Latency per song | Measured by the live PoC script |
@@ -152,7 +188,6 @@ users), Lyria and ElevenLabs Music (no evidence of custom-voice singing), Kits
 
 ## What was not possible here
 
-- Reading the official pages in full, calling any provider, creating a Vocal ID,
-  or generating a song. All blocked by the network policy and by the absence of
-  an API key and an authorized voice sample.
+- (Updated 2026-10-29.) Mureka is now reachable and the key works, but the account has **no credit**, so no
+  Vocal ID has been created and no song has been generated. There is still no authorized voice sample.
 - Evaluation with Hausa-speaking listeners.

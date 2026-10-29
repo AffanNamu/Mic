@@ -1,0 +1,20 @@
+[
+  {
+    "label": "generate",
+    "method": "POST",
+    "url": "https://api.mureka.ai/v1/song/generate",
+    "requestHeaders": {
+      "Authorization": "Bearer [redacted]",
+      "Accept": "application/json",
+      "Content-Type": "application/json"
+    },
+    "requestBody": "{\"lyrics\":\"[Verse]\\nMorning light on the quiet street,\\nA gentle breeze and a steady heartbeat.\\nI lift my hands and I give my thanks,\\nFor every road and every step.\\n\\n[Chorus]\\nAlhamdulillah, I am grateful,\\nEvery day is a gift to hold.\\nAlhamdulillah, my heart is peaceful,\\nWalking on with a calm and open soul.\",\"model\":\"auto\",\"prompt\":\"English nasheed, peaceful, acoustic\"}",
+    "status": 429,
+    "ms": 778,
+    "responseHeaders": {
+      "content-length": "145",
+      "content-type": "application/json; charset=utf-8"
+    },
+    "responseBody": "{\"error\":{\"message\":\"You exceeded your current quota, please check your plan and billing details\"},\"trace_id\":\"4805521af1d37de774954c570954edf5\"}"
+  }
+]

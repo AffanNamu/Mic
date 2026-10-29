@@ -12,7 +12,7 @@ see "Production gaps" for what must change before real traffic.
 ```sh
 cd backend
 npm ci
-npm test            # 189 tests, ~35 s
+npm test            # 196 tests, ~35 s
 npm run typecheck
 cp .env.example .env   # fill in; there are no default secrets
 set -a; . ./.env; set +a
@@ -121,7 +121,7 @@ queued ──→ cancelled                                         (credits rele
 
 ## What is verified and what is not
 
-Verified by the test suite (189 backend tests) with a labelled **test double** and a
+Verified by the test suite (196 backend tests) with a labelled **test double** and a
 local mock HTTP server: all of the above behaviour, including failures, empty responses,
 timeouts, duplicate submissions, expired credentials, insufficient credits, crash
 recovery, secret non-leakage, account deletion (and that nothing personal is left). Twenty deliberate
