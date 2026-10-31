@@ -12,7 +12,7 @@ see "Production gaps" for what must change before real traffic.
 ```sh
 cd backend
 npm ci
-npm test            # 196 tests, ~35 s
+npm test            # 241 tests, ~40 s
 npm run typecheck
 cp .env.example .env   # fill in; there are no default secrets
 set -a; . ./.env; set +a
@@ -20,7 +20,7 @@ npm start
 ```
 
 With `PROVIDER=none` (the default) the server runs, but nothing can be generated and
-every endpoint says so. `PROVIDER=mureka` needs `MUREKA_API_KEY`.
+every endpoint says so. `PROVIDER=mureka` needs `MUREKA_API_KEY`; `PROVIDER=heartmula` (HeartMuLa through WaveSpeedAI, no personal voice) needs `WAVESPEED_API_KEY`.
 
 ## Layout
 
@@ -31,13 +31,13 @@ every endpoint says so. `PROVIDER=mureka` needs `MUREKA_API_KEY`.
 | `src/voices.ts`, `consent.ts` | Voice records, server-owned consent text, upload validation, revoke, delete |
 | `src/ledger.ts` | Append-only credit ledger: reserve / capture / release |
 | `src/jobs.ts`, `worker.ts` | Idempotent submission and the persistent job state machine |
-| `src/provider/` | `MusicProvider` port, `UnconfiguredProvider`, `MurekaProvider` |
+| `src/provider/` | `MusicProvider` port, `UnconfiguredProvider`, `MurekaProvider`, `WaveSpeedHeartMulaProvider`, shared `http-util.ts` |
 | `src/blobstore.ts` | Encrypted private file storage behind a small interface |
 | `src/songs.ts` | Library, signed audio links |
 | `src/account.ts` | Account deletion |
 | `src/metrics.ts` | Operator metrics: completion, latency, cost per successful song |
 | `migrations/` | Append-only SQL migrations with checksum guard |
-| `scripts/` | `mureka-probe.mjs`, `live-poc.ts`, `summarize-listening.ts` |
+| `scripts/` | `mureka-probe.mjs`, `heartmula-probe.mjs`, `live-poc.ts`, `summarize-listening.ts` |
 | `test/` | Tests; `test/support/` holds the **test double**, never imported by `src/` |
 
 ## API (all JSON; `Authorization: Bearer <token>` except where noted)
@@ -121,7 +121,7 @@ queued ──→ cancelled                                         (credits rele
 
 ## What is verified and what is not
 
-Verified by the test suite (196 backend tests) with a labelled **test double** and a
+Verified by the test suite (241 backend tests) with a labelled **test double** and a
 local mock HTTP server: all of the above behaviour, including failures, empty responses,
 timeouts, duplicate submissions, expired credentials, insufficient credits, crash
 recovery, secret non-leakage, account deletion (and that nothing personal is left). Twenty deliberate

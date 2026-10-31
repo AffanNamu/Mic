@@ -89,6 +89,7 @@ Notes).
 | Voice enrollment / cloning provider | **Adapter written, fails closed.** `MurekaProvider.enrollVoice` refuses until `MUREKA_VOCAL_CLONE_PATH` is set (the documented value is `/v1/song/vocal-clone`). The request now follows the official page (`file` only; 15–30 s; mp3/m4a documented, WAV unconfirmed). **Never run:** the Mureka account has no credit, so no Vocal ID exists. |
 | Voice-conditioned singing / full-song provider | **Adapter written, contract unverified.** `POST /v1/song/generate` with `vocal_id` is documented; field names and status values are from memory and must be confirmed with `backend/scripts/mureka-probe.mjs`. Never run against Mureka. |
 | A real voice → real song generation | **Not done.** Mureka is reachable and the key is valid (2026-10-29), but the account has **no credit** (HTTP 429 "exceeded your current quota" on the first song), so no song and no Vocal ID exist. Also still missing: an authorized participant with signed consent, and native Hausa/Arabic listeners. See [PROVIDER_EVALUATION.md](PROVIDER_EVALUATION.md#live-contract-check-2026-10-29). |
+| HeartMuLa (open model) via WaveSpeedAI | **Adapter written, never run.** `PROVIDER=heartmula`; about $0.10 per song, no voice fee; English documented, Hausa/Arabic undocumented (the owner reports a HeartMuLa trial worked; unverified). **Cannot sing in a user's own voice.** No WaveSpeedAI account or key yet. Not done: hiding the voice-recording screens when the engine cannot clone voices. See [PROVIDER_EVALUATION.md](PROVIDER_EVALUATION.md#heartmula-via-wavespeedai-2026-10-31). |
 | Lyrics model | **Missing.** (Write with AI still says "not connected".) |
 | Provider routing, fallback | **Missing.** Deliberately one provider until one flow works. |
 | Cost accounting | **Real (estimates).** Rate-card estimates per job; reconcile with an invoice. |
@@ -99,7 +100,7 @@ Notes).
 
 | Item | State |
 | --- | --- |
-| Backend: auth, database, migrations, encrypted private storage, jobs, ledger, account deletion | **Real** ([BACKEND.md](BACKEND.md)); 196 tests. Single-node SQLite. |
+| Backend: auth, database, migrations, encrypted private storage, jobs, ledger, account deletion | **Real** ([BACKEND.md](BACKEND.md)); 241 tests. Single-node SQLite. |
 | Webhooks, payments | **Missing** |
 | Web build (release) | **Real**; built and driven in Chromium. |
 | Android build | **Compiles on GitHub.** The container has no Android SDK, but `android.yml` built the release APK on `ubuntu-latest` at head `128cfed` (signature verified, 16 KB alignment check passed). It is **debug-signed and not publishable**: there is no release keystore. The release manifest declares `INTERNET` (needed to reach the backend); cleartext `http://` backends need `usesCleartextTraffic` and are for development only. |

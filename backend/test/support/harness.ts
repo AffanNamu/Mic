@@ -37,6 +37,7 @@ export function testConfig(overrides: Partial<Config> = {}): Config {
     adminToken: ADMIN_TOKEN, corsOrigins: [],
     provider: 'none', murekaApiKey: null, murekaBaseUrl: 'https://api.mureka.ai',
     mureka: { model: 'auto', vocalClonePath: null, songCostMicros: 45_000, enrollCostMicros: 5_000_000, audioHosts: [] },
+    wavespeedApiKey: null, wavespeedBaseUrl: 'https://api.wavespeed.ai', wavespeed: { songCostMicros: 100_000, audioHosts: [] },
     experimentalLanguages: [],
     maxVoiceBytes: 2 * 1024 * 1024, maxLyricsChars: 3000,
     sessionTtlMs: 30 * 86_400_000, jobDeadlineMs: 20 * 60_000, leaseMs: 60_000,

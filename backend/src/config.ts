@@ -12,7 +12,7 @@ export interface Config {
   /** Static token for operator endpoints (credit grants). Null disables them. */
   adminToken: string | null;
   corsOrigins: string[];
-  provider: 'mureka' | 'none';
+  provider: 'mureka' | 'heartmula' | 'none';
   murekaApiKey: string | null;
   murekaBaseUrl: string;
   mureka: {
@@ -21,6 +21,13 @@ export interface Config {
     vocalClonePath: string | null;
     songCostMicros: number;
     enrollCostMicros: number;
+    audioHosts: string[];
+  };
+  /** HeartMuLa through WaveSpeedAI (PROVIDER=heartmula). */
+  wavespeedApiKey: string | null;
+  wavespeedBaseUrl: string;
+  wavespeed: {
+    songCostMicros: number;
     audioHosts: string[];
   };
   /** Languages declared supported beyond the provider's documented list (evaluation only). */
@@ -57,9 +64,11 @@ export function loadConfig(env: Env = process.env): Config {
   if (mediaRaw && mediaRaw.length < 32) problems.push('MEDIA_SIGNING_KEY must be at least 32 characters');
 
   const provider = (env['PROVIDER'] ?? 'none') as Config['provider'];
-  if (provider !== 'mureka' && provider !== 'none') problems.push('PROVIDER must be "mureka" or "none"');
+  if (provider !== 'mureka' && provider !== 'heartmula' && provider !== 'none') problems.push('PROVIDER must be "mureka", "heartmula" or "none"');
   const murekaApiKey = env['MUREKA_API_KEY'] ?? null;
   if (provider === 'mureka' && !murekaApiKey) problems.push('MUREKA_API_KEY is required when PROVIDER=mureka');
+  const wavespeedApiKey = env['WAVESPEED_API_KEY'] ?? null;
+  if (provider === 'heartmula' && !wavespeedApiKey) problems.push('WAVESPEED_API_KEY is required when PROVIDER=heartmula');
 
   const adminToken = env['ADMIN_TOKEN'] ?? null;
   if (adminToken !== null && adminToken.length < 24) problems.push('ADMIN_TOKEN must be at least 24 characters');
@@ -77,6 +86,8 @@ export function loadConfig(env: Env = process.env): Config {
     port: num('PORT', 8080),
     songCostMicros: num('MUREKA_SONG_COST_MICROS', 45_000),
     enrollCostMicros: num('MUREKA_ENROLL_COST_MICROS', 5_000_000),
+    // WaveSpeedAI lists HeartMuLa at $0.10 per song (docs, 2026-10-31).
+    wavespeedSongCostMicros: num('WAVESPEED_SONG_COST_MICROS', 100_000),
     maxVoiceBytes: num('MAX_VOICE_BYTES', 25 * 1024 * 1024),
     maxLyricsChars: num('MAX_LYRICS_CHARS', 3000),
     sessionDays: num('SESSION_TTL_DAYS', 30),
@@ -109,6 +120,12 @@ export function loadConfig(env: Env = process.env): Config {
       songCostMicros: numbers.songCostMicros,
       enrollCostMicros: numbers.enrollCostMicros,
       audioHosts: (env['MUREKA_AUDIO_HOSTS'] ?? '').split(',').map((h) => h.trim().toLowerCase()).filter(Boolean),
+    },
+    wavespeedApiKey,
+    wavespeedBaseUrl: env['WAVESPEED_BASE_URL'] ?? 'https://api.wavespeed.ai',
+    wavespeed: {
+      songCostMicros: numbers.wavespeedSongCostMicros,
+      audioHosts: (env['WAVESPEED_AUDIO_HOSTS'] ?? '').split(',').map((h) => h.trim().toLowerCase()).filter(Boolean),
     },
     experimentalLanguages: (env['EXPERIMENTAL_LANGUAGES'] ?? '')
       .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean),

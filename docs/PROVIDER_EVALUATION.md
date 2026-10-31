@@ -173,6 +173,48 @@ Differences between the adapter and the official pages, and what was changed:
 Other facts from the FAQ: API credits are separate from website membership credits; credits are valid for 12 months
 from the last top-up and are non-refundable; downloading songs is free; the multitrack (stems) feature costs extra.
 
+## HeartMuLa via WaveSpeedAI (2026-10-31)
+
+The project owner proposed HeartMuLa after trying it ("it is working"). **That is their report, with no detail on
+which language was sung or how good it was; it has not been independently verified, and no listening test has been
+run.** What was established by reading, not by running anything:
+
+| Question | Answer | Source |
+| --- | --- | --- |
+| What is it | A 3B-parameter open music model (lyrics + style tags to a full song with vocals), up to about 4 minutes by default. Code **and weights Apache 2.0** since 2026-01-20. | Official repository `HeartMuLa/heartlib` (README) |
+| Languages | The README says "multilingual support covering almost all languages" and lists none. WaveSpeedAI documents **English, Chinese, Japanese, Korean, Spanish**. **Hausa and Arabic are in neither list.** | README; WaveSpeedAI model page |
+| Sing in a person's own voice | **No.** Reference-audio conditioning is listed as a to-do in the repository; a separate cover model exists elsewhere. Tags only choose a gender and a timbre. | README ("TODOs") |
+| Hosted API | WaveSpeedAI: `POST /api/v3/wavespeed-ai/heartmula/generate-music` (`lyrics` required, `tags`, `seed`), then `GET /api/v3/predictions/{id}/result`. Bearer key. **$0.10 per song.** Output files are kept about 7 days. | WaveSpeedAI docs (read through the shell proxy; the host answered `401 Missing API key` to an unauthenticated call, so it is reachable) |
+| Errors | `1407 insufficient_credits`, `1200 content moderation`, `5xxx` temporary. Never retry the submit request blindly: a lost answer may still have created a billed task. | WaveSpeedAI "Error codes" and "Errors, retries and timeouts" |
+| Speed, self-hosting | Authors state a real-time factor of about 1.0 and give no VRAM figure. | README |
+| Commercial use | WaveSpeedAI defers to each model's own terms; for this model that is Apache 2.0 per the repository. Not legal advice. | WaveSpeedAI "Commercial Use Policy" |
+
+What was built (all of it **unrun against the live service**: there is no WaveSpeedAI account or key yet):
+- `backend/src/provider/wavespeed.ts`, selected with `PROVIDER=heartmula` and `WAVESPEED_API_KEY` (server-side only).
+  English is the only documented language; Hausa and Arabic can be switched on with `EXPERIMENTAL_LANGUAGES` for a
+  listening test and never count as "documented". It reports `voiceConditioning: false`, and **refuses** a song that
+  names an enrolled voice instead of quietly singing in a stock one.
+- `backend/scripts/heartmula-probe.mjs`: `--balance` (free) and `--generate --spend` (one song, about $0.10, submitted
+  once and never retried), which also prints the audio host to put in `WAVESPEED_AUDIO_HOSTS`.
+- 40 adapter tests against a local mock of the documented contract (14 deliberate breakages of the adapter were
+  all caught), plus config and probe tests. These show the adapter handles the documented behaviour; they say nothing
+  about whether WaveSpeedAI behaves as documented.
+- The Mureka adapter and this one now share `backend/src/provider/http-util.ts` (bounded reads, audio-URL checks,
+  network-error mapping); the 44 Mureka adapter tests pass unchanged.
+
+What this changes for the product:
+- **No personal voice.** With this engine the app cannot sing in the user's recorded voice. Songs would use a stock
+  singer chosen by tags. The recording and "My Voice" screens exist but would lead nowhere; they should be hidden or
+  disabled when the engine reports `voiceConditioning: false`. **That is not done yet** (see STATUS.md).
+- **No $5 voice fee.** Cost is the per-song price only: $0.10 against Mureka's $0.045-$0.15 plus $5 per voice.
+- A personal voice later needs a separate voice-conversion step (RVC is MIT; Seed-VC is GPL-3.0 and archived), which
+  is unproven for Hausa and Arabic and was not evaluated here.
+
+To settle Hausa and Arabic: top up a WaveSpeedAI account, run `heartmula-probe.mjs --balance`, then `--generate` with
+a short lyric written by a native speaker, and have native listeners score it with `docs/poc/listening-test-template.csv`.
+The pre-registered bar in `docs/poc/README.md` applies unchanged (similarity is not measurable without a voice, so
+pronunciation, naturalness and intelligibility are what count).
+
 ## Still unverified, to check before and during the proof of concept
 
 | Item | How |

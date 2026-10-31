@@ -19,6 +19,16 @@ provider-reported figures if the API returns them.
 Illustration (arithmetic, not a measurement): 1 voice + 10 songs on the $0.045 tier with 2 failures after
 acceptance = $5 + 10 × $0.045 = $5.45 for 8 successes → $0.056 per song excluding the voice, $0.68 including it.
 
+## HeartMuLa via WaveSpeedAI (rate card read 2026-10-31; not yet billed)
+
+| Item | Rate card | Where it is counted |
+| --- | --- | --- |
+| Voice enrolment | not offered (no personal voice) | n/a |
+| Lyrics → song | $0.10 per song | `jobs.provider_cost_micros` (`WAVESPEED_SONG_COST_MICROS`, default 100000) |
+
+Illustration (arithmetic): 10 songs = $1.00, with no fixed voice fee. Whether a task that fails after acceptance is
+billed is not stated on the pages read.
+
 ## Unit economics still unknown
 
 - Real completion rate and retry rate for Mureka.

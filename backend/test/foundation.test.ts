@@ -48,6 +48,29 @@ describe('configuration', () => {
     }
   });
 
+  it('PROVIDER=heartmula needs WAVESPEED_API_KEY (and not a Mureka key), reads its own settings, and never echoes the key', () => {
+    assert.throws(() => loadConfig({ ...goodEnv, PROVIDER: 'heartmula' }), /WAVESPEED_API_KEY is required/);
+    assert.throws(() => loadConfig({ ...goodEnv, PROVIDER: 'heartmula', MUREKA_API_KEY: 'sk-mureka' }), /WAVESPEED_API_KEY is required/);
+    const c = loadConfig({
+      ...goodEnv, PROVIDER: 'heartmula', WAVESPEED_API_KEY: 'ws-SECRET-KEY', WAVESPEED_SONG_COST_MICROS: '120000',
+      WAVESPEED_AUDIO_HOSTS: ' CDN.example.com , files.example.com ', EXPERIMENTAL_LANGUAGES: 'Hausa, arabic',
+    });
+    assert.equal(c.provider, 'heartmula');
+    assert.equal(c.wavespeedApiKey, 'ws-SECRET-KEY');
+    assert.equal(c.wavespeedBaseUrl, 'https://api.wavespeed.ai');
+    assert.equal(c.wavespeed.songCostMicros, 120_000);
+    assert.deepEqual(c.wavespeed.audioHosts, ['cdn.example.com', 'files.example.com']);
+    assert.deepEqual(c.experimentalLanguages, ['hausa', 'arabic']);
+    try { loadConfig({ ...goodEnv, PROVIDER: 'heartmula', WAVESPEED_API_KEY: 'ws-SECRET-KEY', PORT: 'abc' }); assert.fail('should have thrown'); }
+    catch (e) { assert.ok(!(e as Error).message.includes('ws-SECRET-KEY')); }
+  });
+
+  it('with no provider selected, a WaveSpeed key in the environment is not used', () => {
+    const c = loadConfig({ ...goodEnv, WAVESPEED_API_KEY: 'ws-x' });
+    assert.equal(c.provider, 'none');
+    assert.equal(c.wavespeed.songCostMicros, 100_000);
+  });
+
   it('the default lease outlasts the slowest single provider step, so a live worker never loses its own job', () => {
     const c = loadConfig(goodEnv);
     const slowest = Math.max(...Object.values(DEFAULT_TIMEOUTS));

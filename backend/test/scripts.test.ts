@@ -1,7 +1,9 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, rmSync, readdirSync } from 'node:fs';
+import { spawn, spawnSync } from 'node:child_process';
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
+import { mkdtempSync, writeFileSync, readFileSync, rmSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -69,6 +71,90 @@ describe('live PoC runner refuses unsafe or meaningless runs', () => {
       assert.equal(r.status, 2);
       assert.match(r.stderr, /EXPERIMENTAL_LANGUAGES=hausa/);
     } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
+});
+
+describe('HeartMuLa probe against a local mock of the documented contract', () => {
+  const lyricsFile = (dir: string) => { const f = join(dir, 'lyrics.txt'); writeFileSync(f, 'Morning light\nA calm heart'); return f; };
+  const runAsync = (args: string[], env: Record<string, string>) => new Promise<{ status: number | null; out: string }>((resolve) => {
+    const child = spawn('node', ['--disable-warning=ExperimentalWarning', 'scripts/heartmula-probe.mjs', ...args], { cwd: root, env: { PATH: process.env['PATH'] ?? '', ...env } });
+    let out = '';
+    child.stdout.on('data', (d: Buffer) => { out += d; });
+    child.stderr.on('data', (d: Buffer) => { out += d; });
+    child.on('close', (status) => resolve({ status, out }));
+  });
+
+  it('refuses to spend without --spend, and says which key it needs', () => {
+    const r = run('scripts/heartmula-probe.mjs', ['--generate', '--lyrics', 'x.txt'], { WAVESPEED_API_KEY: 'ws-test' });
+    assert.equal(r.status, 2);
+    assert.match(r.stderr, /--spend/);
+    const noKey = run('scripts/heartmula-probe.mjs', ['--balance']);
+    assert.equal(noKey.status, 2);
+    assert.match(noKey.stderr, /WAVESPEED_API_KEY/);
+  });
+
+  it('checks the balance, submits ONCE, polls to completion, downloads audio, and keeps the key out of its transcript', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'hm-probe-'));
+    const seenReq: Array<{ method: string; url: string }> = [];
+    let polls = 0;
+    const srv = createServer((q, res) => {
+      seenReq.push({ method: q.method ?? '', url: q.url ?? '' });
+      const send = (status: number, body: unknown, type = 'application/json') => { res.writeHead(status, { 'content-type': type }); res.end(typeof body === 'string' || Buffer.isBuffer(body) ? body : JSON.stringify(body)); };
+      if (q.url === '/api/v3/balance') return send(200, { code: 200, message: 'success', data: { balance: 12.5 } });
+      if (q.url === '/api/v3/wavespeed-ai/heartmula/generate-music') {
+        const chunks: Buffer[] = []; q.on('data', (c: Buffer) => chunks.push(c));
+        return void q.on('end', () => {
+          const sent = JSON.parse(Buffer.concat(chunks).toString());
+          assert.ok(String(sent.lyrics).startsWith('[verse]\n'), 'untagged lyrics are put under [verse]');
+          send(200, { code: 200, message: 'success', data: { id: 'pred-9', status: 'created' } });
+        });
+      }
+      if (q.url === '/api/v3/predictions/pred-9/result') {
+        polls++;
+        return send(200, { code: 200, data: polls < 2 ? { id: 'pred-9', status: 'processing' } : { id: 'pred-9', status: 'completed', outputs: [`http://${q.headers.host}/files/song.mp3`] } });
+      }
+      if (q.url === '/files/song.mp3') return send(200, Buffer.concat([Buffer.from('ID3'), Buffer.alloc(6000, 1)]), 'audio/mpeg');
+      return send(404, {});
+    });
+    await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+    const baseUrl = `http://127.0.0.1:${(srv.address() as AddressInfo).port}`;
+    const env = { WAVESPEED_API_KEY: 'ws-PROBE-SECRET', WAVESPEED_BASE_URL: baseUrl, PROBE_POLL_MS: '20', PROBE_OUT_DIR: dir };
+    try {
+      const bal = await runAsync(['--balance'], env);
+      assert.equal(bal.status, 0);
+      assert.match(bal.out, /Balance: \$12\.5/);
+      const gen = await runAsync(['--generate', '--lyrics', lyricsFile(dir), '--spend'], env);
+      assert.equal(gen.status, 0, gen.out);
+      assert.match(gen.out, /PASS  submit returned 2xx/);
+      assert.match(gen.out, /PASS  final status is `completed`/);
+      assert.match(gen.out, /PASS  downloaded bytes are recognisable audio/);
+      assert.match(gen.out, /FAIL  a human has listened/, 'the human judgement is never marked as passed by a script');
+      assert.equal(seenReq.filter((x) => x.method === 'POST').length, 1, 'the submit request is sent exactly once');
+      const files = readdirSync(dir).filter((f) => f.endsWith('.json'));
+      assert.equal(files.length, 2);
+      for (const f of files) assert.ok(!readFileSync(join(dir, f), 'utf8').includes('ws-PROBE-SECRET'), `${f} must not contain the key`);
+    } finally {
+      srv.closeAllConnections();
+      await new Promise((r) => srv.close(r));
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('explains an out-of-credit refusal (error 1407) instead of retrying', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'hm-probe-'));
+    const srv = createServer((q, res) => { q.resume(); res.writeHead(400, { 'content-type': 'application/json' }); res.end(JSON.stringify({ code: 1407, message: 'insufficient_credits' })); });
+    await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+    try {
+      const out = await runAsync(['--generate', '--lyrics', lyricsFile(dir), '--spend'],
+        { WAVESPEED_API_KEY: 'ws-k', WAVESPEED_BASE_URL: `http://127.0.0.1:${(srv.address() as AddressInfo).port}`, PROBE_POLL_MS: '20', PROBE_OUT_DIR: dir });
+      assert.equal(out.status, 0);
+      assert.match(out.out, /out of credit \(error 1407\)/);
+      assert.match(out.out, /FAIL  submit returned 2xx/);
+    } finally {
+      srv.closeAllConnections();
+      await new Promise((r) => srv.close(r));
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

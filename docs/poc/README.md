@@ -6,6 +6,10 @@ back in DeenVoice and reopened from the library, with measured latency, cost and
 This build environment could not do that (see [../ACCEPTANCE_PHASE2.md](../ACCEPTANCE_PHASE2.md)). This
 runbook is how you do it on a machine that can.
 
+**HeartMuLa (2026-10-31):** an alternative engine, `PROVIDER=heartmula`, is wired in but has never run; its probe is
+`backend/scripts/heartmula-probe.mjs` (needs a WaveSpeedAI key). It has no personal voice, so steps 4-5 below
+(enrol a voice, reuse it) do not apply to it. See [../PROVIDER_EVALUATION.md](../PROVIDER_EVALUATION.md#heartmula-via-wavespeedai-2026-10-31).
+
 **Where it stands (2026-10-29):** steps 1 and 2 have been run against the live API from the build
 environment (the docs were read and the key was accepted). Step 3 was refused with HTTP 429 "You exceeded your
 current quota" because the account has **no credit**, so nothing after it has run: no song, no Vocal ID, no

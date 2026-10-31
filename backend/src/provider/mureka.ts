@@ -1,5 +1,9 @@
 import type { MusicProvider, ProviderCapabilities, SongPoll, SongRequest } from './types.ts';
 import { ProviderError } from './types.ts';
+import {
+  MAX_AUDIO_BYTES, MAX_JSON_BYTES, badShape, checkAudioUrl, networkError, pickString, readErrorJson, readLimited, retryAfterMs,
+} from './http-util.ts';
+import type { Json } from './http-util.ts';
 
 /**
  * Mureka adapter.
@@ -37,8 +41,6 @@ export interface MurekaOptions {
   fetchImpl?: typeof fetch;
 }
 
-const MAX_AUDIO_BYTES = 60 * 1024 * 1024;
-const MAX_JSON_BYTES = 1024 * 1024;
 const SUCCESS = new Set(['succeeded', 'success', 'completed']);
 const FAILURE = new Set(['failed', 'timeouted', 'timed_out', 'cancelled', 'canceled', 'error']);
 const RUNNING = new Set(['preparing', 'queued', 'running', 'streaming', 'pending', 'processing']);
@@ -46,7 +48,6 @@ const RUNNING = new Set(['preparing', 'queued', 'running', 'streaming', 'pending
 /** The message Mureka sends with a 429 when the account is out of credit ("You exceeded your current quota ..."). */
 const OUT_OF_CREDIT = /exceeded your current quota|run out of credits|insufficient (balance|credits?)/i;
 
-type Json = Record<string, unknown>;
 
 export class MurekaProvider implements MusicProvider {
   readonly name = 'mureka';
@@ -132,7 +133,7 @@ export class MurekaProvider implements MusicProvider {
   }
 
   async downloadAudio(audioUrl: string, signal: AbortSignal): Promise<Buffer> {
-    const url = this.checkAudioUrl(audioUrl);
+    const url = checkAudioUrl(audioUrl, this.o.baseUrl, this.o.audioHosts);
     let res: Response;
     try {
       res = await this.fetchFn(url, { signal, redirect: 'follow' });
@@ -146,22 +147,6 @@ export class MurekaProvider implements MusicProvider {
   }
 
   // ---------------------------------------------------------------- internals
-
-  /** https only, no IP literals or localhost, optional host allow-list. The URL comes from the provider's response. */
-  private checkAudioUrl(raw: string): string {
-    let u: URL;
-    try { u = new URL(raw); } catch { throw new ProviderError('bad_audio_url', 'Result URL is not valid.', { outcome: 'terminal' }); }
-    const host = u.hostname.toLowerCase();
-    const ipLiteral = /^\d+\.\d+\.\d+\.\d+$/.test(host) || host.includes(':');
-    const local = host === 'localhost' || host.endsWith('.local') || host.endsWith('.internal');
-    const apiHost = new URL(this.o.baseUrl).hostname.toLowerCase();
-    const allowed = this.o.audioHosts.length ? this.o.audioHosts.some((h) => host === h || host.endsWith(`.${h}`)) : true;
-    const insecureOk = this.o.baseUrl.startsWith('http://') && host === apiHost; // local test servers only
-    if ((u.protocol !== 'https:' && !insecureOk) || ((ipLiteral || local) && !insecureOk) || !allowed) {
-      throw new ProviderError('bad_audio_url', 'Result URL is not an allowed download location.', { outcome: 'terminal' });
-    }
-    return u.toString();
-  }
 
   private async request(
     method: 'GET' | 'POST', path: string, init: { json?: Json; body?: FormData }, signal: AbortSignal, kind: 'read' | 'write',
@@ -177,7 +162,7 @@ export class MurekaProvider implements MusicProvider {
     } catch (err) {
       throw networkError(err, kind);
     }
-    if (!res.ok) throw this.httpError(res.status, res.headers, kind, await readErrorMessage(res));
+    if (!res.ok) throw this.httpError(res.status, res.headers, kind, errorMessage(await readErrorJson(res)));
 
     // Read first so a size error is reported as such; only the parse failure is a "bad shape".
     // An oversized 2xx to a write may still mean work started, so it is unknown there.
@@ -196,9 +181,8 @@ export class MurekaProvider implements MusicProvider {
   }
 
   private httpError(status: number, headers: Headers, kind: 'read' | 'write', message = ''): ProviderError {
-    const retryAfter = Number(headers.get('retry-after'));
-    const retryAfterMs = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : undefined;
-    const base = { httpStatus: status, ...(retryAfterMs !== undefined ? { retryAfterMs } : {}) };
+    const wait = retryAfterMs(headers);
+    const base = { httpStatus: status, ...(wait !== undefined ? { retryAfterMs: wait } : {}) };
     if (status === 401 || status === 403) {
       return new ProviderError('provider_credentials', 'The provider rejected our credentials.', { ...base, outcome: 'terminal', credentialsInvalid: true });
     }
@@ -222,57 +206,10 @@ export class MurekaProvider implements MusicProvider {
   }
 }
 
-/** The provider's own words for a failed request, bounded and only used to classify it; never shown or logged. */
-async function readErrorMessage(res: Response): Promise<string> {
-  try {
-    const parsed: unknown = JSON.parse((await readLimited(res, 4096, 'terminal')).toString('utf8'));
-    const err = parsed && typeof parsed === 'object' ? (parsed as Json)['error'] : undefined;
-    if (typeof err === 'string') return err;
-    if (err && typeof err === 'object' && typeof (err as Json)['message'] === 'string') return (err as Json)['message'] as string;
-  } catch { /* an unreadable error body is simply not classified */ }
+/** Mureka's error text (`{"error":{"message":"..."}}` or `{"error":"..."}`), used only to tell its two kinds of 429 apart. */
+function errorMessage(body: Json | null): string {
+  const err = body?.['error'];
+  if (typeof err === 'string') return err;
+  if (err && typeof err === 'object' && typeof (err as Json)['message'] === 'string') return (err as Json)['message'] as string;
   return '';
-}
-
-function pickString(obj: Json, keys: string[]): string | null {
-  for (const k of keys) {
-    const v = obj[k];
-    if (typeof v === 'string' && v.length > 0) return v;
-    if (typeof v === 'number') return String(v);
-  }
-  return null;
-}
-
-const badShape = (what: string, outcome: 'unknown' | 'not_started') =>
-  new ProviderError('provider_bad_response', `Unexpected provider response: ${what}.`, { outcome });
-
-function networkError(err: unknown, kind: 'read' | 'write'): ProviderError {
-  const e = err as { name?: string; cause?: { code?: string; errors?: Array<{ code?: string }> }; code?: string };
-  const codes = [e.code, e.cause?.code, ...(e.cause?.errors ?? []).map((x) => x.code)].filter(Boolean) as string[];
-  // The request never left the machine: certainly no work started.
-  const neverSent = ['ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'ENETUNREACH', 'EHOSTUNREACH'];
-  if (codes.length > 0 && codes.every((c) => neverSent.includes(c))) {
-    return new ProviderError('provider_unreachable', 'Could not reach the provider.', { outcome: 'not_started' });
-  }
-  const aborted = e.name === 'AbortError' || e.name === 'TimeoutError';
-  return new ProviderError(aborted ? 'timeout' : 'provider_network_error', 'The connection to the provider failed.', {
-    outcome: kind === 'write' ? 'unknown' : 'not_started',
-  });
-}
-
-async function readLimited(res: Response, max: number, overflow: 'unknown' | 'terminal'): Promise<Buffer> {
-  const reader = res.body?.getReader();
-  if (!reader) return Buffer.alloc(0);
-  const chunks: Buffer[] = [];
-  let total = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    total += value.length;
-    if (total > max) {
-      await reader.cancel();
-      throw new ProviderError('response_too_large', 'The provider response was too large.', { outcome: overflow });
-    }
-    chunks.push(Buffer.from(value));
-  }
-  return Buffer.concat(chunks);
 }
