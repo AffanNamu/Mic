@@ -1,0 +1,259 @@
+[
+  {
+    "label": "submit",
+    "method": "POST",
+    "url": "https://api.wavespeed.ai/api/v3/wavespeed-ai/heartmula/generate-music",
+    "requestHeaders": {
+      "Authorization": "Bearer [redacted]",
+      "Accept": "application/json",
+      "Content-Type": "application/json"
+    },
+    "requestBody": "{\"lyrics\":\"[Verse]\\nMorning light on the quiet street,\\nA gentle breeze and a steady heartbeat.\\nI lift my hands and I give my thanks,\\nFor every road and every step.\\n\\n[Chorus]\\nAlhamdulillah, I am grateful,\\nEvery day is a gift to hold.\\nAlhamdulillah, my heart is peaceful,\\nWalking on with a calm and open soul.\",\"tags\":\"nasheed, calm, acoustic, male vocals\"}",
+    "status": 200,
+    "ms": 441,
+    "responseHeaders": {
+      "content-length": "721",
+      "content-type": "application/json; charset=utf-8"
+    },
+    "responseBody": "{\"code\":200,\"message\":\"success\",\"data\":{\"id\":\"1d8ec3c6eeed40c48704e55bc5e0f22e\",\"model\":\"wavespeed-ai/heartmula/generate-music\",\"input\":{\"lyrics\":\"[Verse]\\nMorning light on the quiet street,\\nA gentle breeze and a steady heartbeat.\\nI lift my hands and I give my thanks,\\nFor every road and every step.\\n\\n[Chorus]\\nAlhamdulillah, I am grateful,\\nEvery day is a gift to hold.\\nAlhamdulillah, my heart is peaceful,\\nWalking on with a calm and open soul.\",\"tags\":\"nasheed, calm, acoustic, male vocals\"},\"outputs\":[],\"urls\":{\"get\":\"https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result\"},\"status\":\"created\",\"created_at\":\"2026-11-01T05:37:57.073Z\",\"code\":0,\"error\":\"\",\"timings\":{\"inference\":0}}}"
+  },
+  {
+    "label": "result #1",
+    "method": "GET",
+    "url": "https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result",
+    "requestHeaders": {
+      "Authorization": "Bearer [redacted]",
+      "Accept": "application/json"
+    },
+    "status": 200,
+    "ms": 289,
+    "responseHeaders": {
+      "content-length": "357",
+      "content-type": "application/json; charset=utf-8"
+    },
+    "responseBody": "{\"code\":200,\"message\":\"success\",\"data\":{\"id\":\"1d8ec3c6eeed40c48704e55bc5e0f22e\",\"model\":\"wavespeed-ai/heartmula/generate-music\",\"outputs\":[],\"urls\":{\"get\":\"https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result\"},\"status\":\"processing\",\"created_at\":\"2026-11-01T05:37:57.071036107Z\",\"code\":0,\"error\":\"\",\"timings\":{\"inference\":0}}}"
+  },
+  {
+    "label": "result #2",
+    "method": "GET",
+    "url": "https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result",
+    "requestHeaders": {
+      "Authorization": "Bearer [redacted]",
+      "Accept": "application/json"
+    },
+    "status": 200,
+    "ms": 382,
+    "responseHeaders": {
+      "content-length": "357",
+      "content-type": "application/json; charset=utf-8"
+    },
+    "responseBody": "{\"code\":200,\"message\":\"success\",\"data\":{\"id\":\"1d8ec3c6eeed40c48704e55bc5e0f22e\",\"model\":\"wavespeed-ai/heartmula/generate-music\",\"outputs\":[],\"urls\":{\"get\":\"https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result\"},\"status\":\"processing\",\"created_at\":\"2026-11-01T05:37:57.071036107Z\",\"code\":0,\"error\":\"\",\"timings\":{\"inference\":0}}}"
+  },
+  {
+    "label": "result #3",
+    "method": "GET",
+    "url": "https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result",
+    "requestHeaders": {
+      "Authorization": "Bearer [redacted]",
+      "Accept": "application/json"
+    },
+    "status": 200,
+    "ms": 386,
+    "responseHeaders": {
+      "content-length": "357",
+      "content-type": "application/json; charset=utf-8"
+    },
+    "responseBody": "{\"code\":200,\"message\":\"success\",\"data\":{\"id\":\"1d8ec3c6eeed40c48704e55bc5e0f22e\",\"model\":\"wavespeed-ai/heartmula/generate-music\",\"outputs\":[],\"urls\":{\"get\":\"https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result\"},\"status\":\"processing\",\"created_at\":\"2026-11-01T05:37:57.071036107Z\",\"code\":0,\"error\":\"\",\"timings\":{\"inference\":0}}}"
+  },
+  {
+    "label": "result #4",
+    "method": "GET",
+    "url": "https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result",
+    "requestHeaders": {
+      "Authorization": "Bearer [redacted]",
+      "Accept": "application/json"
+    },
+    "status": 200,
+    "ms": 433,
+    "responseHeaders": {
+      "content-length": "357",
+      "content-type": "application/json; charset=utf-8"
+    },
+    "responseBody": "{\"code\":200,\"message\":\"success\",\"data\":{\"id\":\"1d8ec3c6eeed40c48704e55bc5e0f22e\",\"model\":\"wavespeed-ai/heartmula/generate-music\",\"outputs\":[],\"urls\":{\"get\":\"https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result\"},\"status\":\"processing\",\"created_at\":\"2026-11-01T05:37:57.071036107Z\",\"code\":0,\"error\":\"\",\"timings\":{\"inference\":0}}}"
+  },
+  {
+    "label": "result #5",
+    "method": "GET",
+    "url": "https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result",
+    "requestHeaders": {
+      "Authorization": "Bearer [redacted]",
+      "Accept": "application/json"
+    },
+    "status": 200,
+    "ms": 380,
+    "responseHeaders": {
+      "content-length": "357",
+      "content-type": "application/json; charset=utf-8"
+    },
+    "responseBody": "{\"code\":200,\"message\":\"success\",\"data\":{\"id\":\"1d8ec3c6eeed40c48704e55bc5e0f22e\",\"model\":\"wavespeed-ai/heartmula/generate-music\",\"outputs\":[],\"urls\":{\"get\":\"https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result\"},\"status\":\"processing\",\"created_at\":\"2026-11-01T05:37:57.071036107Z\",\"code\":0,\"error\":\"\",\"timings\":{\"inference\":0}}}"
+  },
+  {
+    "label": "result #6",
+    "method": "GET",
+    "url": "https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result",
+    "requestHeaders": {
+      "Authorization": "Bearer [redacted]",
+      "Accept": "application/json"
+    },
+    "status": 200,
+    "ms": 425,
+    "responseHeaders": {
+      "content-length": "357",
+      "content-type": "application/json; charset=utf-8"
+    },
+    "responseBody": "{\"code\":200,\"message\":\"success\",\"data\":{\"id\":\"1d8ec3c6eeed40c48704e55bc5e0f22e\",\"model\":\"wavespeed-ai/heartmula/generate-music\",\"outputs\":[],\"urls\":{\"get\":\"https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result\"},\"status\":\"processing\",\"created_at\":\"2026-11-01T05:37:57.071036107Z\",\"code\":0,\"error\":\"\",\"timings\":{\"inference\":0}}}"
+  },
+  {
+    "label": "result #7",
+    "method": "GET",
+    "url": "https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result",
+    "requestHeaders": {
+      "Authorization": "Bearer [redacted]",
+      "Accept": "application/json"
+    },
+    "status": 200,
+    "ms": 406,
+    "responseHeaders": {
+      "content-length": "357",
+      "content-type": "application/json; charset=utf-8"
+    },
+    "responseBody": "{\"code\":200,\"message\":\"success\",\"data\":{\"id\":\"1d8ec3c6eeed40c48704e55bc5e0f22e\",\"model\":\"wavespeed-ai/heartmula/generate-music\",\"outputs\":[],\"urls\":{\"get\":\"https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result\"},\"status\":\"processing\",\"created_at\":\"2026-11-01T05:37:57.071036107Z\",\"code\":0,\"error\":\"\",\"timings\":{\"inference\":0}}}"
+  },
+  {
+    "label": "result #8",
+    "method": "GET",
+    "url": "https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result",
+    "requestHeaders": {
+      "Authorization": "Bearer [redacted]",
+      "Accept": "application/json"
+    },
+    "status": 200,
+    "ms": 492,
+    "responseHeaders": {
+      "content-length": "357",
+      "content-type": "application/json; charset=utf-8"
+    },
+    "responseBody": "{\"code\":200,\"message\":\"success\",\"data\":{\"id\":\"1d8ec3c6eeed40c48704e55bc5e0f22e\",\"model\":\"wavespeed-ai/heartmula/generate-music\",\"outputs\":[],\"urls\":{\"get\":\"https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result\"},\"status\":\"processing\",\"created_at\":\"2026-11-01T05:37:57.071036107Z\",\"code\":0,\"error\":\"\",\"timings\":{\"inference\":0}}}"
+  },
+  {
+    "label": "result #9",
+    "method": "GET",
+    "url": "https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result",
+    "requestHeaders": {
+      "Authorization": "Bearer [redacted]",
+      "Accept": "application/json"
+    },
+    "status": 200,
+    "ms": 420,
+    "responseHeaders": {
+      "content-length": "357",
+      "content-type": "application/json; charset=utf-8"
+    },
+    "responseBody": "{\"code\":200,\"message\":\"success\",\"data\":{\"id\":\"1d8ec3c6eeed40c48704e55bc5e0f22e\",\"model\":\"wavespeed-ai/heartmula/generate-music\",\"outputs\":[],\"urls\":{\"get\":\"https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result\"},\"status\":\"processing\",\"created_at\":\"2026-11-01T05:37:57.071036107Z\",\"code\":0,\"error\":\"\",\"timings\":{\"inference\":0}}}"
+  },
+  {
+    "label": "result #10",
+    "method": "GET",
+    "url": "https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result",
+    "requestHeaders": {
+      "Authorization": "Bearer [redacted]",
+      "Accept": "application/json"
+    },
+    "status": 200,
+    "ms": 407,
+    "responseHeaders": {
+      "content-length": "357",
+      "content-type": "application/json; charset=utf-8"
+    },
+    "responseBody": "{\"code\":200,\"message\":\"success\",\"data\":{\"id\":\"1d8ec3c6eeed40c48704e55bc5e0f22e\",\"model\":\"wavespeed-ai/heartmula/generate-music\",\"outputs\":[],\"urls\":{\"get\":\"https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result\"},\"status\":\"processing\",\"created_at\":\"2026-11-01T05:37:57.071036107Z\",\"code\":0,\"error\":\"\",\"timings\":{\"inference\":0}}}"
+  },
+  {
+    "label": "result #11",
+    "method": "GET",
+    "url": "https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result",
+    "requestHeaders": {
+      "Authorization": "Bearer [redacted]",
+      "Accept": "application/json"
+    },
+    "status": 200,
+    "ms": 512,
+    "responseHeaders": {
+      "content-length": "357",
+      "content-type": "application/json; charset=utf-8"
+    },
+    "responseBody": "{\"code\":200,\"message\":\"success\",\"data\":{\"id\":\"1d8ec3c6eeed40c48704e55bc5e0f22e\",\"model\":\"wavespeed-ai/heartmula/generate-music\",\"outputs\":[],\"urls\":{\"get\":\"https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result\"},\"status\":\"processing\",\"created_at\":\"2026-11-01T05:37:57.071036107Z\",\"code\":0,\"error\":\"\",\"timings\":{\"inference\":0}}}"
+  },
+  {
+    "label": "result #12",
+    "method": "GET",
+    "url": "https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result",
+    "requestHeaders": {
+      "Authorization": "Bearer [redacted]",
+      "Accept": "application/json"
+    },
+    "status": 200,
+    "ms": 412,
+    "responseHeaders": {
+      "content-length": "357",
+      "content-type": "application/json; charset=utf-8"
+    },
+    "responseBody": "{\"code\":200,\"message\":\"success\",\"data\":{\"id\":\"1d8ec3c6eeed40c48704e55bc5e0f22e\",\"model\":\"wavespeed-ai/heartmula/generate-music\",\"outputs\":[],\"urls\":{\"get\":\"https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result\"},\"status\":\"processing\",\"created_at\":\"2026-11-01T05:37:57.071036107Z\",\"code\":0,\"error\":\"\",\"timings\":{\"inference\":0}}}"
+  },
+  {
+    "label": "result #13",
+    "method": "GET",
+    "url": "https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result",
+    "requestHeaders": {
+      "Authorization": "Bearer [redacted]",
+      "Accept": "application/json"
+    },
+    "status": 200,
+    "ms": 404,
+    "responseHeaders": {
+      "content-length": "357",
+      "content-type": "application/json; charset=utf-8"
+    },
+    "responseBody": "{\"code\":200,\"message\":\"success\",\"data\":{\"id\":\"1d8ec3c6eeed40c48704e55bc5e0f22e\",\"model\":\"wavespeed-ai/heartmula/generate-music\",\"outputs\":[],\"urls\":{\"get\":\"https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result\"},\"status\":\"processing\",\"created_at\":\"2026-11-01T05:37:57.071036107Z\",\"code\":0,\"error\":\"\",\"timings\":{\"inference\":0}}}"
+  },
+  {
+    "label": "result #14",
+    "method": "GET",
+    "url": "https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result",
+    "requestHeaders": {
+      "Authorization": "Bearer [redacted]",
+      "Accept": "application/json"
+    },
+    "status": 200,
+    "ms": 408,
+    "responseHeaders": {
+      "content-length": "487",
+      "content-type": "application/json; charset=utf-8"
+    },
+    "responseBody": "{\"code\":200,\"message\":\"success\",\"data\":{\"id\":\"1d8ec3c6eeed40c48704e55bc5e0f22e\",\"model\":\"wavespeed-ai/heartmula/generate-music\",\"outputs\":[\"https://d2h7xmz5gqybh9.cloudfront.net/output/a439b1e5-7838-410b-8fde-ee750cbd07e9-u2_b199fd6d-0029-4753-8689-aee83c1b9225.mp3\"],\"urls\":{\"get\":\"https://api.wavespeed.ai/api/v3/predictions/1d8ec3c6eeed40c48704e55bc5e0f22e/result\"},\"status\":\"completed\",\"created_at\":\"2026-11-01T05:37:57.071036107Z\",\"code\":0,\"error\":\"\",\"timings\":{\"inference\":74721}}}"
+  },
+  {
+    "label": "download",
+    "method": "GET",
+    "url": "https://d2h7xmz5gqybh9.cloudfront.net/output/a439b1e5-7838-410b-8fde-ee750cbd07e9-u2_b199fd6d-0029-4753-8689-aee83c1b9225.mp3",
+    "requestHeaders": {},
+    "status": 200,
+    "ms": 911,
+    "responseHeaders": {
+      "content-length": "2526765",
+      "content-type": "audio/mpeg"
+    },
+    "responseBytes": 2526765,
+    "responseSha256": "bdc25d5c9cd096c8aefc49ed433d477181fcf2d7581029ca32183dfec92d6ec4",
+    "responseHead": "49443304000000000023545353450000"
+  }
+]

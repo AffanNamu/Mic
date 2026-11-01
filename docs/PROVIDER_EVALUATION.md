@@ -245,6 +245,49 @@ mixing. This is arithmetic from list prices, not a measurement. Account limits f
 minute and 2 at once (Bronze); a first top-up of any size moves it to Silver. A $1 trial credit is only for eligible
 new users, and this account has none.
 
+### Live results with a funded account (2026-11-01)
+
+The owner topped up the WaveSpeedAI account ($5.50). Spent about $0.59 in all. Transcripts (key removed):
+`docs/poc/transcripts/2026-11-01T05-37-56-674Z-generate.json` and the two later `generate` files.
+
+**HeartMuLa adapter contract: matched the documentation on every point checked** (3 songs, 6 of 7 probe checks each; the
+7th is a human listening, which no script can pass):
+- Reply shape `{"code":200,"message":"success","data":{"id","model","input","outputs","urls","status","created_at","code":0,"error":"","timings":{"inference"}}}`;
+  statuses seen: `created`, `processing`, `completed`. `outputs[0]` is an MP3 URL (48 kHz stereo, 320 kbps) on a CloudFront
+  host (`d2h7xmz5gqybh9.cloudfront.net`; set `WAVESPEED_AUDIO_HOSTS=cloudfront.net` to restrict downloads).
+- Price: **$0.10 per song, flat** (balance fell by exactly $0.10, then $0.20 for two more), whatever the length.
+- Time: 76 s (English, 63 s of audio), 44 s (Hausa, 25 s), 38 s (Arabic, 44 s). Length follows the lyrics (4-8 lines gave 25-63 s).
+
+**Do the words survive?** Crude machine check: Whisper transcribes the finished song and the text is compared with the lyrics.
+| Language | Result | Reading |
+| --- | --- | --- |
+| English | 96% of lyric words recovered from the isolated vocal | clearly sung |
+| Arabic | text similarity 91% (`الحمد لله على كل حال ... سبحان الله ... لا إله إلا الله والله أكبر` came back almost verbatim) | recognisably sung Arabic; **a native listener must still judge pronunciation and religious wording** |
+| Hausa | Whisper returned non-text (it has little Hausa and hallucinated on singing) | **no machine evidence either way; needs a Hausa speaker's ears** |
+
+The Hausa and Arabic lyrics (`docs/poc/lyrics-ha-smoke.txt`, `lyrics-ar-smoke.txt`) were written by Claude from simple,
+common phrases and have **not** been checked by a native speaker.
+
+**Plan B chain, measured on stand-in voices** (three text-to-speech voices stood in for a person; no real person's voice was used):
+| Step | Result |
+| --- | --- |
+| `audio-vocal-isolator` | Returns **both stems**: `outputs = [vocals.mp3, instrumental.mp3]`; 9.6 s for 63 s of audio. **Priced per second of audio (about $0.001/s), not the $0.001 listed:** $0.064 for this song. |
+| `chatterbox/speech-to-speech` | $0.02 per call, about 13 s. Output is **24 kHz mono WAV**. **It converted only the first 39.8 s** of a 63 s vocal (the loudness envelope matches the first 39.8 s, correlation 0.83; squeezing the whole vocal gives 0.06). Longer songs need cutting into chunks. |
+| Words after conversion | 92% of lyric words recovered (the missing ones are the last word, past the cut). Words survive. |
+| Key | **Not preserved.** Distance of the converted vocal from the song's key (nearest octave): +0.2, -1.0 and **+4.4 semitones** for the three stand-in voices. A vocal several semitones off the backing track sounds wrong. |
+| Melody after the best possible whole-song key correction | Median pitch error per frame 0.6, 1.0 and 1.5 semitones; frames within half a semitone: 42%, 29%, 21%. Likely audibly out of tune; **needs human ears**. |
+
+Pitch-shifting the converted vocal by the measured offset (ffmpeg `rubberband`) puts the key right (measured remaining offset
+0.0 and +0.1 semitones), but it cannot repair the per-note errors.
+
+**Cost of the chain for a 3-minute song** (arithmetic, assuming the isolator's per-second price holds): HeartMuLa $0.10 +
+isolator about $0.18 + five 40-second conversions $0.10 = **about $0.38**, no per-voice fee, plus our own mixing.
+
+**Current reading (not a verdict):** the hosted chain is mechanically possible and keeps the words, but a speech voice-conversion
+model does not hold a sung melody or key reliably, and it needs chunking, key alignment and mixing that we would have to build.
+Files for listening were produced (backing track plus each stand-in voice, with and without key correction) and given to the
+owner. If they judge the sound unacceptable, the next candidate is a singing-specific model (Seed-VC or RVC) on a rented GPU.
+
 **Decision rule.** Do not build the multi-stage job (store a stage per song, call three services, mix, retry safely)
 until one cheap experiment says the result is worth it:
 1. One consenting person records 15-30 s of their own voice (the project owner is fine).

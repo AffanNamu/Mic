@@ -1,0 +1,18 @@
+[
+  {
+    "label": "balance",
+    "method": "GET",
+    "url": "https://api.wavespeed.ai/api/v3/balance",
+    "requestHeaders": {
+      "Authorization": "Bearer [redacted]",
+      "Accept": "application/json"
+    },
+    "status": 200,
+    "ms": 460,
+    "responseHeaders": {
+      "content-length": "55",
+      "content-type": "application/json; charset=utf-8"
+    },
+    "responseBody": "{\"code\":200,\"message\":\"success\",\"data\":{\"balance\":5.5}}"
+  }
+]

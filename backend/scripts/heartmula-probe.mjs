@@ -7,7 +7,7 @@
 //   WAVESPEED_API_KEY=... node scripts/heartmula-probe.mjs --balance
 //       Key check. Reads the account balance in USD (GET /api/v3/balance). Costs nothing.
 //
-//   WAVESPEED_API_KEY=... node scripts/heartmula-probe.mjs --generate --lyrics lyrics.txt [--tags "pop, calm"] --spend
+//   WAVESPEED_API_KEY=... node scripts/heartmula-probe.mjs --generate --lyrics lyrics.txt [--tags "pop, calm"] [--save-audio song.mp3] --spend
 //       SPENDS MONEY (the rate card says $0.10). Submits ONE song, polls it, downloads it and checks that the
 //       bytes are audio. The submit request is sent once and never retried: if its answer is lost, the task may
 //       exist and be billed, so look in the WaveSpeedAI History page before running it again.
@@ -147,6 +147,8 @@ async function generate() {
     const head = dl.buf.subarray(0, 12);
     const audio = dl.buf.length >= 4096 && (head.toString('latin1', 0, 3) === 'ID3' || (head[0] === 0xff && (head[1] & 0xe0) === 0xe0) || head.toString('latin1', 0, 4) === 'RIFF' || head.toString('latin1', 0, 4) === 'fLaC' || head.toString('latin1', 4, 8) === 'ftyp');
     check('downloaded bytes are recognisable audio of plausible size', audio, `${dl.buf.length} bytes, first bytes ${head.toString('hex')}`);
+    const saveTo = opt('--save-audio');
+    if (saveTo && audio) { mkdirSync(dirname(saveTo), { recursive: true }); writeFileSync(saveTo, dl.buf); console.log(`  audio saved to ${saveTo} (keep it private: do not commit it)`); }
     check('a human has listened and judged the song (NOT automated)', false, 'listening evaluation is required; see docs/poc/README.md');
   }
   console.log(`\nLatency submit→ready: ${Math.round(latencyMs / 1000)} s`);
@@ -163,6 +165,6 @@ function summary(checks) {
 if (flag('--balance')) await balance();
 else if (flag('--generate')) await generate();
 else {
-  console.log('Usage: --balance | --generate --lyrics <file> [--tags <tags>] --spend');
+  console.log('Usage: --balance | --generate --lyrics <file> [--tags <tags>] [--save-audio <file>] --spend');
   process.exit(1);
 }

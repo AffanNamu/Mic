@@ -26,8 +26,12 @@ acceptance = $5 + 10 × $0.045 = $5.45 for 8 successes → $0.056 per song exclu
 | Voice enrolment | not offered (no personal voice) | n/a |
 | Lyrics → song | $0.10 per song | `jobs.provider_cost_micros` (`WAVESPEED_SONG_COST_MICROS`, default 100000) |
 
-Illustration (arithmetic): 10 songs = $1.00, with no fixed voice fee. Whether a task that fails after acceptance is
-billed is not stated on the pages read.
+**Observed 2026-11-01:** three songs (25 s, 44 s and 63 s of audio) each cost exactly $0.10; no fixed voice fee. Whether a
+task that fails after acceptance is billed is still unknown (none failed).
+
+If a personal voice were added with the hosted chain (measured on 2026-11-01, see PROVIDER_EVALUATION.md): vocal isolation is
+priced per second of audio (about $0.001/s, $0.064 for a 63 s song) and voice conversion is $0.02 per call of at most
+about 40 s of audio, so a 3-minute song would cost roughly $0.10 + $0.18 + $0.10 = **$0.38** (arithmetic, not a bill).
 
 ## Unit economics still unknown
 

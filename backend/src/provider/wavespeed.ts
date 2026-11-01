@@ -8,9 +8,10 @@ import type { Json } from './http-util.ts';
 /**
  * HeartMuLa (open-source music model, Apache 2.0) through WaveSpeedAI's hosted API.
  *
- * CONTRACT STATUS: READ FROM THE DOCUMENTATION (2026-10-31), NEVER RUN. No WaveSpeedAI account or key existed
- * when this was written, so nothing here has been exercised against the live service. Known from the pages
- * (docs/PROVIDER_EVALUATION.md, "HeartMuLa via WaveSpeedAI"):
+ * CONTRACT STATUS: WRITTEN FROM THE DOCUMENTATION (2026-10-31), THEN EXERCISED LIVE (2026-11-01): `GET /balance`, and the
+ * submit, poll and download of three real songs matched everything assumed below (docs/PROVIDER_EVALUATION.md, "Live results").
+ * Still unobserved: every failure path (402/1407/1200/5xx/failed/timeout), which are covered only by tests against a mock.
+ * From the documentation (docs/PROVIDER_EVALUATION.md, "HeartMuLa via WaveSpeedAI"):
  *   - `POST {base}/api/v3/wavespeed-ai/heartmula/generate-music`, bearer auth, JSON `{lyrics, tags?, seed?}`;
  *     answers a prediction (`id`, `status`, ...), optionally wrapped as `{code, message, data}`.
  *   - `GET {base}/api/v3/predictions/{id}/result` until `status` is final: `completed` (read `outputs`) or
