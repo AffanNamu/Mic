@@ -215,6 +215,52 @@ a short lyric written by a native speaker, and have native listeners score it wi
 The pre-registered bar in `docs/poc/README.md` applies unchanged (similarity is not measurable without a voice, so
 pronunciation, naturalness and intelligibility are what count).
 
+### Plan B: a personal voice on top of HeartMuLa (2026-11-01)
+
+The owner chose to keep the personal-voice promise. A WaveSpeedAI key was supplied and checked; it was used from the
+command line only and is not stored anywhere in the repository.
+
+**Observed live (free calls):**
+- `GET /api/v3/balance` answered `{"code":200,"message":"success","data":{"balance":0}}`: the key is valid, the balance
+  is **$0**, so nothing could be generated. This is the first live confirmation of the `{code, message, data}` envelope the
+  adapter assumes. Transcript: `docs/poc/transcripts/2026-11-01T00-14-39-625Z-balance.json`.
+- `GET /api/v3/models` returned 1,054 hosted models, including `wavespeed-ai/heartmula/generate-music` at `base_price` 0.1
+  (matches the docs page). **No singing-voice-conversion model (RVC, Seed-VC, so-vits-svc) is hosted.**
+
+**What the catalogue offers for a personal voice (request formats read from the catalogue, none of them run):**
+
+| Step | Model | Price | Inputs | Verdict |
+| --- | --- | --- | --- | --- |
+| 1. Song | `wavespeed-ai/heartmula/generate-music` | $0.10 | `lyrics`, `tags`, `seed` | Hausa/Arabic undocumented |
+| 2. Split vocals from backing | `wavespeed-ai/audio-vocal-isolator` | $0.001 | `audio` (URL) only | Its page says "extract vocals or instrumental", but the API schema has no such option and the **output format is unknown** |
+| 3. Change the singer | `chatterbox/speech-to-speech` | $0.02 | `audio` (source), `reference_audio` (target voice) | A **speech** voice-conversion model. Whether it holds a sung melody, pitch and words is **unknown** |
+| 4. Mix | ffmpeg on our server | free | converted vocals + backing | needs the backing track from step 2 |
+
+Rejected: `elevenlabs/voice-changer` (preset voices only, no user voice), `minimax/music-cover` (invents a new vocal
+character), `minimax/voice-clone` and `kwaivgi/kling-v2.6/create-voice` (speech cloning), and `mureka-ai/vocal-clone`
+($7.50 here, against $5 direct; English-only engine, so it would not give Hausa or Arabic).
+
+Estimated cost if step 3 works: about **$0.12 per song** ($0.10 + $0.001 + $0.02), with no per-voice fee, plus the
+mixing. This is arithmetic from list prices, not a measurement. Account limits for a new account: 5 predictions a
+minute and 2 at once (Bronze); a first top-up of any size moves it to Silver. A $1 trial credit is only for eligible
+new users, and this account has none.
+
+**Decision rule.** Do not build the multi-stage job (store a stage per song, call three services, mix, retry safely)
+until one cheap experiment says the result is worth it:
+1. One consenting person records 15-30 s of their own voice (the project owner is fine).
+2. One English song with lyrics we own, through steps 1-4 (about $0.13).
+3. Listen with the original sample first. If the converted vocal is recognisably that person, holds the melody and
+   does not garble the words, repeat once with a native-speaker Hausa lyric and once with an Arabic one.
+4. **If step 3 fails** (likely failure: speech-trained conversion smears sung pitch), the fallback is to self-host a
+   singing-voice-conversion model (Seed-VC is GPL-3.0 and archived; RVC is MIT and wants 10+ minutes of clean voice per
+   person) on a rented GPU. That needs a GPU account and a container, is a larger build, and is also unproven for these
+   languages. A second fallback is Mureka's own voice cloning, which keeps the personal voice but only in languages
+   Mureka documents (no Hausa, no Arabic).
+
+Privacy cost of plan B: every song sends the person's voice sample to WaveSpeedAI (uploaded to its storage, which keeps
+generated files about 7 days, and processed by a third-party model). The consent text must name that before anyone
+else's voice is used; it currently says only "its music provider".
+
 ## Still unverified, to check before and during the proof of concept
 
 | Item | How |
