@@ -288,6 +288,32 @@ model does not hold a sung melody or key reliably, and it needs chunking, key al
 Files for listening were produced (backing track plus each stand-in voice, with and without key correction) and given to the
 owner. If they judge the sound unacceptable, the next candidate is a singing-specific model (Seed-VC or RVC) on a rented GPU.
 
+**Owner's listening verdict (2026-11-01): "the sound is very, very bad"**, for the voice-swapped English files **and** for the
+Hausa and Arabic HeartMuLa songs. So: (1) plan B's hosted chain (Chatterbox) is rejected on sound, and (2) HeartMuLa's Hausa and
+Arabic are not good enough either, which a personal-voice model cannot fix: the song engine is the bottleneck. (Caveat: the Hausa
+and Arabic lyrics were short phrases written by Claude and not checked by a native speaker; bad lyrics could contribute.)
+
+**Same Hausa and Arabic lyric through other hosted engines (2026-11-01, files sent to the owner, not yet judged):**
+| Engine | Price seen | Arabic words recoverable by machine (Whisper `ar`, text similarity to the lyric) |
+| --- | --- | --- |
+| `wavespeed-ai/ace-step-1.5` (open, MIT) | $0.012 for 40 s | **77%**: heard most of the lyric |
+| `wavespeed-ai/heartmula` (earlier run) | $0.10 | 91% |
+| `minimax/music-02`, `music-3.0` | $0.03, $0.15 | 27-29%: Whisper heard "subscribe to the channel", its usual hallucination on audio without sung words |
+| `elevenlabs/music` | **$0.40 for 40 s** (not the $0.10 listed; scales with length) | 37%, same hallucination |
+| `minimax/music-2.6` | $0.15 | not checked (a 272 s file) |
+| `google/lyria-3.5/music` | $0.10 | Hausa generated; Arabic not run (spend cap reached) |
+For Hausa no machine check exists. A machine transcript of singing is a crude proxy for "recognisably sung"; it says nothing about
+accent, pronunciation or taste, so the owner's ears decide. Spent on WaveSpeedAI in total: about $2.34 of the $5.50.
+
+**Next step chosen by the owner: use their RunPod GPU ($15 credit, test budget capped at $3 for this work).** What that can and cannot do:
+- It can host open models: ACE-Step 1.5 (sings Arabic recognisably per the machine check) or HeartMuLa, and a singing-voice
+  converter (Seed-VC with pitch conditioning is the candidate that targets the key drift measured above).
+- It cannot teach a model to sing Hausa from nothing. A fine-tune (LoRA) needs Hausa and Arabic **singing** recordings we have the
+  right to use; none was found (a Hausa speech corpus forbids generative use). Without that data a "voice model" would be speech
+  at best.
+- Needs from the owner: `RUNPOD_API_KEY` as an environment secret (restricted to Pods read/write), and the rights-cleared recordings
+  if fine-tuning is wanted. Every pod is deleted as soon as its step finishes.
+
 **Decision rule.** Do not build the multi-stage job (store a stage per song, call three services, mix, retry safely)
 until one cheap experiment says the result is worth it:
 1. One consenting person records 15-30 s of their own voice (the project owner is fine).
