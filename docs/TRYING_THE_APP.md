@@ -28,8 +28,22 @@ Three separate reasons, all verified:
   `python3 -m http.server` inside it); opening `index.html` directly will not work.
 - **iPhone:** none. The iOS job only checks that the code compiles; installing needs Apple signing, which does not exist.
 
+## Verified on 2026-11-02: a real song, made and played inside the app (in a browser)
+`tool/web_e2e_real_engine.mjs` ran the web build in Chromium against a real local backend using the **real** engine (HeartMuLa
+through WaveSpeedAI): sign up, credits, Create Song (the app says the engine sings in its own voice and asks for none),
+English, Generate, a real job followed to "Your song is ready", Play, and the audio really played (position 0:05 / 1:03, served as
+`audio/mpeg`); the saved file is a 63-second, 2.5 MB MP3, and the song is on Home after a reload. 8 of 8 steps, no page errors,
+about $0.10. Screenshots: `docs/verification/real_engine/`. **This proves the plumbing, not the sound.** Only a person can judge
+the song; it is in the file sent to the owner. Not run on a phone, and not run against a hosted server.
+
+## Known rough edges seen in that run
+- Create Song still offers "Duration 3 - 4 minutes", but HeartMuLa's length follows the lyrics (the test song was 63 s). The setting
+  is not honoured and not yet marked as such.
+- The player says "english · Made with heartmula" in lower case.
+- Language: only English is offered by this engine (Hausa and Arabic are undocumented for it and were judged very bad).
+
 ## What would make a real end-to-end test
 1. ~~A stock-singer mode~~ (done, see point 3 above).
-2. The backend hosted somewhere with https, a persistent disk, and the provider key as a server secret.
+2. The backend hosted somewhere (`render.yaml` is a free-plan test blueprint, **untried on Render**; see its comments for what the free plan loses) with https, a persistent disk, and the provider key as a server secret.
 3. The repository variable `API_BASE_URL` set to that address, then a rebuild of the Android app.
 Hausa and Arabic: the owner judged HeartMuLa's output very bad on 2026-11-01; English has not been judged.

@@ -255,7 +255,7 @@ Chromium's fake device playing a tone, so no human voice was recorded; no Androi
 
 | Command | Result |
 | --- | --- |
-| `cd backend && npm test` | 243 passed, 0 failed |
+| `cd backend && npm test` | 246 passed, 0 failed |
 | `cd backend && npm run typecheck` | clean |
 | `dart format --output=none --set-exit-if-changed lib test tool` | 0 changed |
 | `flutter analyze` | No issues found |

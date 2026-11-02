@@ -1,0 +1,37 @@
+# A TEST deployment of the DeenVoice backend on Render's free plan. Not production, and NOT yet tried on Render.
+#
+# What to expect on the free plan (render.com/docs/free): the service sleeps after 15 minutes without traffic and takes about
+# a minute to wake, and its disk is ephemeral. Accounts, credits and songs are LOST every time it sleeps, restarts or redeploys,
+# so a phone that was signed in is signed out afterwards. Fine for a test sitting; not for keeping anyone's data.
+#
+# How: Render dashboard -> New -> Blueprint -> pick this repository and branch. Render asks for WAVESPEED_API_KEY (type it
+# there; it is never committed) and generates the three secrets below. The service URL (https://...onrender.com) is what
+# the app needs as API_BASE_URL.
+services:
+  - type: web
+    name: deenvoice-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION          # the server needs Node >= 22.18 (built-in sqlite, no build step)
+        value: 22.22.0
+      - key: HOST
+        value: 0.0.0.0
+      - key: PROVIDER
+        value: heartmula
+      - key: WAVESPEED_API_KEY
+        sync: false                # asked for in the dashboard
+      - key: WAVESPEED_AUDIO_HOSTS
+        value: cloudfront.net
+      - key: BLOB_ENCRYPTION_KEY   # a random base64 256-bit value, which is the 32-byte key the server expects
+        generateValue: true
+      - key: MEDIA_SIGNING_KEY
+        generateValue: true
+      - key: ADMIN_TOKEN           # lets you grant credits with curl; visible only in your dashboard
+        generateValue: true
+      - key: SIGNUP_CREDITS        # TEST ONLY: every new account gets 3 free songs; each costs about $0.10 at the provider
+        value: "3"

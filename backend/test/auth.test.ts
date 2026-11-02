@@ -21,6 +21,30 @@ describe('authentication', () => {
     assert.match(String(one(env.db, 'SELECT password_hash FROM users')!['password_hash']), /^scrypt\$/);
   });
 
+  it('a new account starts with no credits unless the operator sets SIGNUP_CREDITS', async () => {
+    env = makeEnv();
+    const u = await register(env);
+    const bal = await env.app.inject({ method: 'GET', url: '/v1/credits', headers: { authorization: `Bearer ${u.token}` } });
+    assert.equal(bal.json().available, 0);
+    assert.equal(all(env.db, 'SELECT * FROM credit_ledger').length, 0);
+  });
+
+  it('with SIGNUP_CREDITS set, each new account (and only a new account) gets exactly that many, recorded in the ledger', async () => {
+    env = makeEnv({ config: { credits: { perSong: 1, signup: 4 } } });
+    const u = await register(env);
+    const auth1 = { authorization: `Bearer ${u.token}` };
+    assert.equal((await env.app.inject({ method: 'GET', url: '/v1/credits', headers: auth1 })).json().available, 4);
+    const rows = all(env.db, 'SELECT kind, amount, note FROM credit_ledger');
+    assert.deepEqual(rows.map((r) => [r['kind'], r['amount']]), [['grant', 4]]);
+    // Signing in again, or failing to register a duplicate, never grants more.
+    await env.app.inject({ method: 'POST', url: '/v1/auth/login', payload: { email: u.email, password: u.password } });
+    const dup = await env.app.inject({ method: 'POST', url: '/v1/auth/register', payload: { email: u.email, password: 'another long password' } });
+    assert.equal(dup.statusCode, 409);
+    assert.equal((await env.app.inject({ method: 'GET', url: '/v1/credits', headers: auth1 })).json().available, 4);
+    const second = await register(env, 'second@example.com');
+    assert.equal((await env.app.inject({ method: 'GET', url: '/v1/credits', headers: { authorization: `Bearer ${second.token}` } })).json().available, 4);
+  });
+
   it('rejects weak passwords, bad emails and duplicate accounts (case-insensitive)', async () => {
     env = makeEnv();
     const bad = async (payload: object) => env.app.inject({ method: 'POST', url: '/v1/auth/register', payload });

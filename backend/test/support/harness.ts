@@ -41,7 +41,7 @@ export function testConfig(overrides: Partial<Config> = {}): Config {
     experimentalLanguages: [],
     maxVoiceBytes: 2 * 1024 * 1024, maxLyricsChars: 3000,
     sessionTtlMs: 30 * 86_400_000, jobDeadlineMs: 20 * 60_000, leaseMs: 60_000,
-    credits: { perSong: 1 },
+    credits: { perSong: 1, signup: 0 },
     ...overrides,
   };
 }

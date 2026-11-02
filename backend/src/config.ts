@@ -37,7 +37,11 @@ export interface Config {
   sessionTtlMs: number;
   jobDeadlineMs: number;
   leaseMs: number;
-  credits: { perSong: number };
+  credits: {
+    perSong: number;
+    /** Free credits every new account starts with. 0 (the default) means none. Each one can cost real provider money. */
+    signup: number;
+  };
 }
 
 type Env = Record<string, string | undefined>;
@@ -96,6 +100,11 @@ export function loadConfig(env: Env = process.env): Config {
     leaseSeconds: num('JOB_LEASE_SECONDS', 120),
     creditsPerSong: num('CREDITS_PER_SONG', 1),
   };
+  const signupRaw = env['SIGNUP_CREDITS'];
+  const signupCredits = signupRaw === undefined || signupRaw === '' ? 0 : Number(signupRaw);
+  if (!Number.isInteger(signupCredits) || signupCredits < 0 || signupCredits > 100) {
+    problems.push('SIGNUP_CREDITS must be a whole number from 0 to 100');
+  }
 
   if (problems.length > 0) {
     throw new Error(`Invalid configuration:\n - ${problems.join('\n - ')}`);
@@ -134,6 +143,6 @@ export function loadConfig(env: Env = process.env): Config {
     sessionTtlMs: numbers.sessionDays * 86_400_000,
     jobDeadlineMs: numbers.jobDeadlineMinutes * 60_000,
     leaseMs: numbers.leaseSeconds * 1000,
-    credits: { perSong: numbers.creditsPerSong },
+    credits: { perSong: numbers.creditsPerSong, signup: signupCredits },
   };
 }

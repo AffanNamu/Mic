@@ -100,7 +100,7 @@ Notes).
 
 | Item | State |
 | --- | --- |
-| Backend: auth, database, migrations, encrypted private storage, jobs, ledger, account deletion | **Real** ([BACKEND.md](BACKEND.md)); 243 tests. Single-node SQLite. |
+| Backend: auth, database, migrations, encrypted private storage, jobs, ledger, account deletion | **Real** ([BACKEND.md](BACKEND.md)); 246 tests. Single-node SQLite. |
 | Webhooks, payments | **Missing** |
 | Web build (release) | **Real**; built and driven in Chromium. |
 | Android build | **Compiles on GitHub.** The container has no Android SDK, but `android.yml` built the release APK on `ubuntu-latest` at head `128cfed` (signature verified, 16 KB alignment check passed). It is **debug-signed and not publishable**: there is no release keystore. The release manifest declares `INTERNET` (needed to reach the backend); cleartext `http://` backends need `usesCleartextTraffic` and are for development only. |

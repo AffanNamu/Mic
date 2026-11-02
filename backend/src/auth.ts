@@ -5,6 +5,7 @@ import { addMs, iso } from './clock.ts';
 import { AppError, unauthorized } from './errors.ts';
 import { hashPassword, randomToken, sha256Hex, verifyPassword } from './crypto.ts';
 import { audit } from './audit.ts';
+import * as ledger from './ledger.ts';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -33,7 +34,7 @@ async function openSession(db: Db, clock: Clock, userId: string, ttlMs: number) 
   return { token, expiresAt: iso(addMs(now, ttlMs)) };
 }
 
-export async function register(db: Db, clock: Clock, ttlMs: number, emailRaw: string, password: string) {
+export async function register(db: Db, clock: Clock, ttlMs: number, emailRaw: string, password: string, starterCredits = 0) {
   const email = normalizeEmail(emailRaw);
   checkPassword(password);
   if (one(db, 'SELECT 1 AS x FROM users WHERE email = ?', email)) {
@@ -43,6 +44,7 @@ export async function register(db: Db, clock: Clock, ttlMs: number, emailRaw: st
   run(db, `INSERT INTO users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)`,
     id, email, await hashPassword(password), iso(clock.now()));
   audit(db, clock, { userId: id, kind: 'user.registered', subjectType: 'user', subjectId: id });
+  if (starterCredits > 0) ledger.grant(db, clock, id, starterCredits, 'starter credits at sign-up');
   return { userId: id, email, ...(await openSession(db, clock, id, ttlMs)) };
 }
 

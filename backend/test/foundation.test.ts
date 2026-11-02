@@ -65,6 +65,15 @@ describe('configuration', () => {
     catch (e) { assert.ok(!(e as Error).message.includes('ws-SECRET-KEY')); }
   });
 
+  it('SIGNUP_CREDITS defaults to none, accepts 0 to 100 whole numbers, and rejects anything else', () => {
+    assert.equal(loadConfig(goodEnv).credits.signup, 0);
+    assert.equal(loadConfig({ ...goodEnv, SIGNUP_CREDITS: '3' }).credits.signup, 3);
+    assert.equal(loadConfig({ ...goodEnv, SIGNUP_CREDITS: '' }).credits.signup, 0);
+    for (const bad of ['-1', '101', '2.5', 'many']) {
+      assert.throws(() => loadConfig({ ...goodEnv, SIGNUP_CREDITS: bad }), /SIGNUP_CREDITS must be a whole number/, bad);
+    }
+  });
+
   it('with no provider selected, a WaveSpeed key in the environment is not used', () => {
     const c = loadConfig({ ...goodEnv, WAVESPEED_API_KEY: 'ws-x' });
     assert.equal(c.provider, 'none');

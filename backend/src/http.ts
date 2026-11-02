@@ -107,7 +107,7 @@ export function buildApp(deps: Deps): FastifyInstance {
   app.post('/v1/auth/register', { schema: { body: credentialsBody } }, async (req, reply) => {
     if (!registerLimit.allow(req.ip)) throw new AppError(429, 'rate_limited', 'Too many attempts. Wait a minute.');
     const b = req.body as { email: string; password: string };
-    const r = await auth.register(db, clock, config.sessionTtlMs, b.email, b.password);
+    const r = await auth.register(db, clock, config.sessionTtlMs, b.email, b.password, config.credits.signup);
     return reply.status(201).send({ userId: r.userId, email: r.email, token: r.token, expiresAt: r.expiresAt });
   });
 
