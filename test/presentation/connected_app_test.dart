@@ -21,6 +21,9 @@ import '../support/fakes.dart';
 import '../support/fakes_backend.dart';
 import '../support/harness.dart';
 
+/// Three hours after the fixtures' `createdAt` (see fakes_backend.dart).
+final _rigNow = DateTime.utc(2026, 10, 26, 12);
+
 class Rig {
   Rig({
     this.signedIn = true,
@@ -59,6 +62,9 @@ class Rig {
 
   List<Override> get overrides => [
     ...localStoreOverrides(),
+    // The fixtures are dated 2026-10-26 09:00 UTC. The Library only lists failed jobs from the last 24 hours, so the
+    // clock must be fixed or this suite breaks as the real date moves on (it did, one day after the fixtures were written).
+    clockProvider.overrideWithValue(() => _rigNow),
     apiBaseUrlProvider.overrideWithValue('https://api.example.test'),
     sessionStoreProvider.overrideWithValue(store),
     authServiceProvider.overrideWithValue(auth),
