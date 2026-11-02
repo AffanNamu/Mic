@@ -202,6 +202,27 @@ describe('job submission: validation against what the engine can honestly do', (
     assert.equal(res.json().error.code, 'voice_conditioning_unsupported');
   });
 
+  it('an engine that sings in its own voice makes a vocal song with no voice chosen, and still refuses a named voice', async () => {
+    const u = await setup(5);
+    env.provider.caps = { voiceConditioning: false };
+    const ok = await job(u.token, { voiceId: null, idempotencyKey: 'own-voice-key-1' });
+    assert.equal(ok.statusCode, 202, ok.body);
+    assert.equal(one(env.db, 'SELECT voice_id AS v FROM jobs WHERE id = ?', ok.json().job.id)!['v'], null);
+    await env.drain();
+    assert.equal(env.provider.submitted.at(-1)!.providerVoiceId, null, 'no voice reaches the engine');
+    const named = await job(u.token, { idempotencyKey: 'own-voice-key-2' });
+    assert.equal(named.statusCode, 422);
+    assert.equal(named.json().error.code, 'voice_conditioning_unsupported');
+    assert.match(named.json().error.message, /without choosing one/);
+  });
+
+  it('an engine that CAN sing in a saved voice still requires one for a vocal song', async () => {
+    const u = await setup(5);
+    const res = await job(u.token, { voiceId: null, idempotencyKey: 'needs-voice-key' });
+    assert.equal(res.statusCode, 400);
+    assert.equal(res.json().error.code, 'voice_required');
+  });
+
   it('an instrumental needs no voice', async () => {
     const u = await setup(2);
     const res = await job(u.token, { songType: 'instrumental', voiceId: null });

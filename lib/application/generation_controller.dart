@@ -141,11 +141,13 @@ class GenerationController extends Notifier<GenerationUiState> {
       return;
     }
 
+    // The engine's own voice needs no saved voice, and the server refuses one it cannot use.
+    final sendVoice = capabilities.requiresVoice(draft.type) ? voiceId : null;
     final request = GenerationRequest(
       draft: draft,
-      voiceId: draft.type.usesVoice ? voiceId : null,
+      voiceId: sendVoice,
       estimatedCredits: cost,
-      idempotencyKey: _keyFor(draft, voiceId),
+      idempotencyKey: _keyFor(draft, sendVoice),
     );
     try {
       final receipt = await ref

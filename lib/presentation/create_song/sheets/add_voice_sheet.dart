@@ -47,11 +47,16 @@ class _AddVoiceSheetState extends ConsumerState<_AddVoiceSheet> {
 
   bool get _needsOwnerName => _ownership == VoiceOwnership.authorizedByOwner;
 
+  /// The connected engine sings only in its own voice: a recording could not be used, so none is accepted.
+  bool get _engineCannotUseVoices =>
+      ref.read(capabilitiesProvider).value?.singsInOwnVoice ?? false;
+
   bool get _canSubmit =>
       _consent &&
       _name.text.trim().isNotEmpty &&
       (!_needsOwnerName || _authorizedBy.text.trim().isNotEmpty) &&
-      !_busy;
+      !_busy &&
+      !_engineCannotUseVoices;
 
   /// Picks a file, or records one in the app, then enrolls it.
   Future<void> _upload() => _enroll(() async {
@@ -131,6 +136,8 @@ class _AddVoiceSheetState extends ConsumerState<_AddVoiceSheet> {
   Widget build(BuildContext context) {
     final statements = ref.watch(consentStatementsProvider);
     final statementsFailed = statements.hasError;
+    final engine = ref.watch(capabilitiesProvider).value;
+    final noVoices = engine?.singsInOwnVoice ?? false;
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SafeArea(
@@ -150,6 +157,15 @@ class _AddVoiceSheetState extends ConsumerState<_AddVoiceSheet> {
                 'person’s voice. Only add a voice you are allowed to use.',
                 style: DeenText.body,
               ),
+              if (noVoices) ...[
+                const SizedBox(height: 10),
+                Text(
+                  '${engine!.engineName} sings in its own built-in voice, so '
+                  'it can’t use a recorded voice. Adding one is switched off '
+                  'until an engine that can sing in a saved voice is connected.',
+                  style: DeenText.error,
+                ),
+              ],
               const SizedBox(height: 14),
               TextField(
                 controller: _name,

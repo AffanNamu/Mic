@@ -268,7 +268,12 @@ final stepProgressProvider =
       final draft = ref.watch(songDraftProvider).draft;
       final voices = ref.watch(voicesProvider).value ?? const <VoiceProfile>[];
       final voiceId = ref.watch(selectedVoiceIdProvider);
-      final voiceReady = voices.any((v) => v.id == voiceId && v.isSelectable);
+      final capabilities =
+          ref.watch(capabilitiesProvider).value ?? GenerationCapabilities.none;
+      // An engine that sings in its own voice needs no voice, so that step is never left open for want of one.
+      final voiceReady =
+          !capabilities.requiresVoice(draft.type) ||
+          voices.any((v) => v.id == voiceId && v.isSelectable);
       final completed = completedSteps(draft, voiceReady: voiceReady);
       return (completed: completed, active: activeStep(completed));
     });

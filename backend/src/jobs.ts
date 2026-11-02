@@ -115,10 +115,14 @@ export function createJob(deps: Deps, userId: string, raw: CreateJobInput): { jo
     }
 
     const caps = deps.provider.capabilities();
-    if (USES_VOICE.has(n.songType)) {
-      if (!caps.voiceConditioning) {
-        throw new AppError(422, 'voice_conditioning_unsupported', `${caps.engineName} can't sing in a saved voice.`);
+    if (USES_VOICE.has(n.songType) && !caps.voiceConditioning) {
+      // This engine sings in its own built-in voice, so the song needs none. Naming a saved voice would be silently
+      // ignored, which would be a lie, so it is refused.
+      if (n.voiceId) {
+        throw new AppError(422, 'voice_conditioning_unsupported',
+          `${caps.engineName} can't sing in a saved voice. Create the song without choosing one.`);
       }
+    } else if (USES_VOICE.has(n.songType)) {
       if (!n.voiceId) throw new AppError(400, 'voice_required', 'Choose a voice.');
       const voice = one(deps.db, `SELECT * FROM voices WHERE id = ? AND user_id = ?`, n.voiceId, userId);
       if (!voice || voice['status'] === 'deleted') throw notFound('Voice');

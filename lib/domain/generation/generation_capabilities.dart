@@ -45,4 +45,15 @@ class GenerationCapabilities {
   final ({int min, int max})? voiceSampleSeconds;
 
   bool get isAvailable => engineName != null && unavailableReason == null;
+
+  /// Whether a song of [type] needs a saved voice with this engine.
+  ///
+  /// An engine that cannot sing in a saved voice sings in its own built-in voice, so the song needs none and the
+  /// app never sends one (the server would refuse it rather than ignore it). With no engine connected the old
+  /// rule stands: a vocal song needs a voice.
+  bool requiresVoice(SongType type) =>
+      type.usesVoice && (!isAvailable || voiceConditioning);
+
+  /// True when the engine is connected and sings only in its own voice.
+  bool get singsInOwnVoice => isAvailable && !voiceConditioning;
 }

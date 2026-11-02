@@ -522,6 +522,58 @@ void main() {
       await future;
     });
   });
+
+  group('an engine that sings in its own voice', () {
+    const ownVoice = GenerationCapabilities(
+      engineName: 'Own Voice Engine',
+      songTypes: {SongType.fullSong},
+      languages: {...SongLanguage.values},
+      voiceConditioning: false,
+      advancedOptionIds: {},
+    );
+
+    test('makes a vocal song with no saved voice, and sends none', () async {
+      final service = FakeGenerationService(capabilities: ownVoice);
+      final c = _container(generation: service, withVoice: false);
+      _fillValidDraft(c);
+      await _controller(c).submit();
+      expect(c.read(generationControllerProvider), isA<GenerationAccepted>());
+      expect(service.submitted.single.voiceId, isNull);
+    });
+
+    test('never sends a saved voice the engine could not use', () async {
+      final service = FakeGenerationService(capabilities: ownVoice);
+      final c = _container(generation: service); // one ready voice exists
+      _fillValidDraft(c);
+      c.read(songDraftProvider.notifier).selectVoice(readyOwnVoice.id);
+      await _controller(c).submit();
+      expect(c.read(generationControllerProvider), isA<GenerationAccepted>());
+      expect(service.submitted.single.voiceId, isNull);
+    });
+
+    test(
+      'an engine that can sing in a voice still sends the chosen one',
+      () async {
+        final service = FakeGenerationService();
+        final c = _container(generation: service);
+        _fillValidDraft(c);
+        await _controller(c).submit();
+        expect(service.submitted.single.voiceId, readyOwnVoice.id);
+      },
+    );
+
+    test('the voice step counts as done without a voice', () async {
+      final c = _container(
+        generation: FakeGenerationService(capabilities: ownVoice),
+        withVoice: false,
+      );
+      _fillValidDraft(c);
+      await c.read(capabilitiesProvider.future);
+      await c.read(voicesProvider.future);
+      final progress = c.read(stepProgressProvider);
+      expect(progress.completed, contains(SongStep.voiceStyle));
+    });
+  });
 }
 
 // Constants for the unconfigured-assistant probe above.

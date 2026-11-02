@@ -69,7 +69,7 @@ describe('capabilities never claim more than is documented or configured', () =>
     assert.deepEqual(c.languages, ['english']);
     assert.equal(c.voiceConditioning, false);
     assert.equal(c.voiceSampleSeconds, null);
-    assert.deepEqual(c.songTypes, ['full_song']);
+    assert.deepEqual(c.songTypes, ['full_song', 'nasheed_style']);
     assert.equal(c.estimatedSongCostMicros, 100_000);
     assert.equal(c.estimatedEnrollCostMicros, null);
   });

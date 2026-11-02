@@ -56,7 +56,7 @@ export class WaveSpeedHeartMulaProvider implements MusicProvider {
     const documented = ['english']; // WaveSpeedAI documents English, Chinese, Japanese, Korean and Spanish; only English maps to DeenVoice.
     return {
       engineName: 'HeartMuLa',
-      songTypes: ['full_song'],
+      songTypes: ['full_song', 'nasheed_style'], // a nasheed is a full song with a style template; the engine has no separate mode
       documentedLanguages: documented,
       languages: [...new Set([...documented, ...this.o.experimentalLanguages])],
       voiceConditioning: false,

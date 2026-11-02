@@ -156,9 +156,11 @@ export class JobWorker {
         run(db, `UPDATE voices SET lease_until = ? WHERE id = ?`, iso(addMs(clock.now(), backoffMs(attempts, e.retryAfterMs))), id);
         return;
       }
-      fail(e.code, e.outcome === 'unknown'
-        ? 'We could not confirm the music service accepted this recording. Try again, or upload a new one.'
-        : 'The music service could not use this recording. Try a clearer solo recording.');
+      fail(e.code, e.code === 'voice_not_supported'
+        ? 'The connected music engine sings in its own voice, so it cannot use a recorded voice.'
+        : e.outcome === 'unknown'
+          ? 'We could not confirm the music service accepted this recording. Try again, or upload a new one.'
+          : 'The music service could not use this recording. Try a clearer solo recording.');
     }
   }
 

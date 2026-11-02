@@ -28,6 +28,15 @@ class VoiceSelector extends ConsumerWidget {
 
     final list = voices.value ?? const <VoiceProfile>[];
 
+    final engine = ref.watch(capabilitiesProvider).value;
+    if (usesVoice && engine != null && engine.singsInOwnVoice) {
+      // Offering "Add New Voice" here would lead nowhere: this engine cannot sing in a recording.
+      return _Note(
+        '${engine.engineName} sings in its own built-in voice, so this song '
+        'needs no voice. Recorded voices can’t be used with it.',
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

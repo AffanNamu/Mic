@@ -126,7 +126,77 @@ void main() {
           effectiveVoiceId: readyOwnVoice.id,
           capabilities: engine,
         );
-        expect(issues.where((i) => i.field == DraftField.engine), hasLength(3));
+        // Song type and language are flagged. A voice-less engine is not an
+        // issue by itself: it sings in its own voice (tested below).
+        expect(issues.where((i) => i.field == DraftField.engine), hasLength(2));
+        expect(issues.where((i) => i.field == DraftField.voice), isEmpty);
+      });
+
+      const ownVoiceEngine = GenerationCapabilities(
+        engineName: 'Eng',
+        songTypes: {SongType.fullSong},
+        languages: {...SongLanguage.values},
+        voiceConditioning: false,
+        advancedOptionIds: {},
+      );
+
+      test('an engine that sings in its own voice needs no saved voice', () {
+        final issues = validateDraft(
+          _complete,
+          voices: const [],
+          effectiveVoiceId: null,
+          capabilities: ownVoiceEngine,
+        );
+        expect(issues, isEmpty);
+      });
+
+      test('...and ignores a saved voice instead of judging it', () {
+        const speechOnly = VoiceProfile(
+          id: 'v',
+          displayName: 'Speech only',
+          kind: VoiceKind.own,
+          status: VoiceStatus.ready,
+          supportsSinging: false,
+        );
+        final issues = validateDraft(
+          _complete,
+          voices: const [speechOnly],
+          effectiveVoiceId: 'v',
+          capabilities: ownVoiceEngine,
+        );
+        expect(issues, isEmpty);
+      });
+
+      test('an engine that can sing in a saved voice still demands one', () {
+        final issues = validateDraft(
+          _complete,
+          voices: const [],
+          effectiveVoiceId: null,
+          capabilities: fakes.FakeGenerationService.fullCapabilities,
+        );
+        expect(issues.map((i) => i.field), contains(DraftField.voice));
+      });
+
+      test('requiresVoice: only vocal types, only with a voice-capable or missing engine', () {
+        expect(ownVoiceEngine.requiresVoice(SongType.fullSong), isFalse);
+        expect(ownVoiceEngine.singsInOwnVoice, isTrue);
+        expect(
+          fakes.FakeGenerationService.fullCapabilities.requiresVoice(
+            SongType.fullSong,
+          ),
+          isTrue,
+        );
+        expect(
+          fakes.FakeGenerationService.fullCapabilities.requiresVoice(
+            SongType.instrumental,
+          ),
+          isFalse,
+        );
+        expect(
+          GenerationCapabilities.none.requiresVoice(SongType.fullSong),
+          isTrue,
+        );
+        expect(GenerationCapabilities.none.singsInOwnVoice, isFalse);
       });
 
       test('passes when the engine supports the request', () {

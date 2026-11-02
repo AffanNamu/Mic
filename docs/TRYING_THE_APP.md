@@ -7,11 +7,10 @@ Three separate reasons, all verified:
    it is not connected`. In that mode the app opens straight to Home with no sign-in; Create Song says no engine is connected.
 2. **No server is running anywhere.** The backend only ever ran inside temporary build containers. The app needs it on a public
    **https** address (Android blocks plain http).
-3. **The only engine tested live (HeartMuLa) cannot make a song through this app.** Every song type that has vocals (Full Song,
-   Vocal Only, Nasheed Style) requires a saved personal voice, and HeartMuLa cannot sing in one. The server refuses with
-   `422 voice_conditioning_unsupported` and the app blocks it first (`song_validation.dart`). Instrumental is not offered by
-   that adapter either. So even with a server, `PROVIDER=heartmula` produces no song until a "stock singer" mode (a built-in
-   male/female voice chosen by tag, no personal voice) is added. **Not built yet.**
+3. **(Fixed 2026-11-02)** The engine tested live (HeartMuLa) cannot sing in a saved personal voice, and the app and server used
+   to refuse every vocal song for that reason. Now an engine that sings only in its own built-in voice makes a vocal song with
+   no voice chosen: the app shows "<engine> sings in its own built-in voice", sends no voice, and the server refuses a named
+   voice rather than ignoring it. Add New Voice is switched off with the reason while such an engine is connected.
 
 ## What you can try today (no server)
 - Install on Android, open it: onboarding, Home, the five tabs, Create Song (forms, lyrics, language, validation messages), My Voice,
@@ -30,7 +29,7 @@ Three separate reasons, all verified:
 - **iPhone:** none. The iOS job only checks that the code compiles; installing needs Apple signing, which does not exist.
 
 ## What would make a real end-to-end test
-1. A stock-singer mode so HeartMuLa (about $0.10 an English song) or ACE-Step can make a song without a personal voice.
+1. ~~A stock-singer mode~~ (done, see point 3 above).
 2. The backend hosted somewhere with https, a persistent disk, and the provider key as a server secret.
 3. The repository variable `API_BASE_URL` set to that address, then a rebuild of the Android app.
 Hausa and Arabic: the owner judged HeartMuLa's output very bad on 2026-11-01; English has not been judged.

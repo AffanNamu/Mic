@@ -128,6 +128,68 @@ void main() {
   });
 
   group('voice selection', () {
+    testWidgets(
+      'an engine that sings in its own voice offers no voice cards and still makes the song',
+      (tester) async {
+        final generation = FakeGenerationService(
+          capabilities: const GenerationCapabilities(
+            engineName: 'Own Voice Engine',
+            songTypes: {SongType.fullSong},
+            languages: {...SongLanguage.values},
+            voiceConditioning: false,
+            advancedOptionIds: {},
+          ),
+        );
+        await pumpApp(tester, env(generation: generation));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.textContaining('sings in its own built-in voice'),
+          findsOneWidget,
+        );
+        expect(find.text('Add New Voice'), findsNothing);
+        expect(find.text('Sister Aisha'), findsNothing);
+
+        await tester.enterText(titleField, 'Praise');
+        await tester.enterText(lyricsField, 'Ya Rabbi');
+        await tapVisible(tester, find.text('Generate Song'));
+        expect(find.text('Your song is in the queue'), findsOneWidget);
+        expect(generation.submitted.single.voiceId, isNull);
+      },
+    );
+
+    testWidgets(
+      'Add New Voice is switched off, with the reason, when the engine cannot use a recording',
+      (tester) async {
+        final generation = FakeGenerationService(
+          capabilities: const GenerationCapabilities(
+            engineName: 'Own Voice Engine',
+            songTypes: {SongType.fullSong},
+            languages: {...SongLanguage.values},
+            voiceConditioning: false,
+            advancedOptionIds: {},
+          ),
+        );
+        await pumpApp(tester, env(generation: generation));
+        await tester.pumpAndSettle();
+        // The create screen hides the card, so open the sheet from Manage Voices.
+        await tapVisible(tester, find.text('Manage Voices'));
+        await tester.tap(find.byTooltip('Add New Voice'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.textContaining('Adding one is switched off'),
+          findsOneWidget,
+        );
+        await tester.tap(find.byType(CheckboxListTile));
+        await tester.pumpAndSettle();
+        final upload = find.widgetWithText(FilledButton, 'Upload a recording');
+        expect(tester.widget<FilledButton>(upload).onPressed, isNull);
+        final record = find.widgetWithText(OutlinedButton, 'Record now');
+        expect(tester.widget<OutlinedButton>(record).onPressed, isNull);
+      },
+    );
+
     testWidgets('shows the user’s real voices and selects by tap', (
       tester,
     ) async {

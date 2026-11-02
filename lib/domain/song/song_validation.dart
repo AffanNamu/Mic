@@ -70,7 +70,7 @@ List<DraftIssue> validateDraft(
     }
   }
 
-  if (draft.type.usesVoice) {
+  if (capabilities.requiresVoice(draft.type)) {
     final voice = voices.where((v) => v.id == effectiveVoiceId).firstOrNull;
     if (voice == null) {
       issues.add(
@@ -105,14 +105,6 @@ List<DraftIssue> validateDraft(
         DraftIssue(
           DraftField.engine,
           '$engine doesn’t support ${draft.language.label} yet.',
-        ),
-      );
-    }
-    if (draft.type.usesVoice && !capabilities.voiceConditioning) {
-      issues.add(
-        DraftIssue(
-          DraftField.engine,
-          '$engine can’t sing in a saved voice profile.',
         ),
       );
     }
